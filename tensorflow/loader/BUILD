@@ -51,7 +51,7 @@ cc_binary(
         "-ffunction-sections",
         "-fdata-sections",
     ],
-    linkopts = if_android_arm64([
+    linkopts = [
         "-landroid",
         "-latomic",
         "-ldl",
@@ -60,7 +60,7 @@ cc_binary(
         "-z defs",
         "-s",
         "-Wl,--gc-sections",
-    ]),
+    ],
     linkstatic = 1,
     tags = [
         "manual",
@@ -68,6 +68,6 @@ cc_binary(
     ],
     deps = [
         "//tensorflow/c:c_api",
-        "//tensorflow/core:android_tensorflow_lib",
+        "//tensorflow/core:tensorflow_opensource",
     ],
 )
