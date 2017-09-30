@@ -222,11 +222,12 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
   native.http_archive(
       name = "com_googlesource_code_re2",
       urls = [
-          "http://mirror.bazel.build/github.com/google/re2/archive/b94b7cd42e9f02673cd748c1ac1d16db4052514c.tar.gz",
+          # "http://mirror.bazel.build/github.com/google/re2/archive/b94b7cd42e9f02673cd748c1ac1d16db4052514c.tar.gz",
           # "https://github.com/google/re2/archive/b94b7cd42e9f02673cd748c1ac1d16db4052514c.tar.gz",
+            "https://github.com/supernovaremnant/re2/archive/7346bf57212dda8fc7438a63b4d4d9dc9ebb51d5.tar.gz",
       ],
-      sha256 = "bd63550101e056427c9e7ff12a408c1c8b74e9803f393ca916b2926fc2c4906f",
-      strip_prefix = "re2-b94b7cd42e9f02673cd748c1ac1d16db4052514c",
+      sha256 = "957971fac6d7f9bbccd430df7dea10357fedd871954d9fea6dd7c2596ba0d1bd",
+      strip_prefix = "re2-7346bf57212dda8fc7438a63b4d4d9dc9ebb51d5",
   )
 
   native.http_archive(
@@ -552,11 +553,12 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
   native.new_http_archive(
       name = "lmdb",
       urls = [
-          "http://mirror.bazel.build/github.com/LMDB/lmdb/archive/LMDB_0.9.19.tar.gz",
+          # "http://mirror.bazel.build/github.com/LMDB/lmdb/archive/LMDB_0.9.19.tar.gz",
           # "https://github.com/LMDB/lmdb/archive/LMDB_0.9.19.tar.gz",
+            "https://github.com/supernovaremnant/lmdb/archive/3daab3be733b933a3fd2263441da4976206b27a2.tar.gz",
       ],
-      sha256 = "108532fb94c6f227558d45be3f3347b52539f0f58290a7bb31ec06c462d05326",
-      strip_prefix = "lmdb-LMDB_0.9.19/libraries/liblmdb",
+      sha256 = "6515f649fc5e0488b930ef86efb7c1e0654bb166a792fd3b73905ce31d93da14",
+      strip_prefix = "lmdb-3daab3be733b933a3fd2263441da4976206b27a2/libraries/liblmdb",
       build_file = str(Label("//third_party:lmdb.BUILD")),
   )
 
