@@ -24,12 +24,12 @@ android_sdk_repository(
     # SDK manager as it updates periodically.
     build_tools_version = "26.0.2",
     # Replace with path to Android SDK on your system
-    path = "/home/chengwei/Android/Sdk",
+    path = "/media/chengwei/disk2/Android/Sdk",
 )
 #
 android_ndk_repository(
     name="androidndk",
-    path="/home/chengwei/Android/Sdk/ndk-bundle",
+    path="/media/chengwei/disk2/Android/Sdk/ndk-bundle",
     # This needs to be 14 or higher to compile TensorFlow.
     # Please specify API level to >= 21 to build for 64-bit
     # archtectures or the Android NDK will automatically select biggest
