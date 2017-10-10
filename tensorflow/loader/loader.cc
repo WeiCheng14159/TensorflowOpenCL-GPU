@@ -35,15 +35,21 @@ int main(int argc, char* argv[]) {
     _XTensor.setRandom();
     _YTensor.setRandom();
 
-    for (int i = 0; i < 10; ++i) {
+    float cost = 0.0; 
 
+    TF_CHECK_OK(session->Run({{"x", x}, {"y", y}}, {"cost"}, {}, &outputs)); // Get cost        
+    float initial_cost = outputs[0].scalar<float>()(0); 
+
+    int iter = 0;
+
+    do{
         TF_CHECK_OK(session->Run({{"x", x}, {"y", y}}, {"cost"}, {}, &outputs)); // Get cost
-        float cost = outputs[0].scalar<float>()(0);
-        std::cout << "Cost: " <<  cost << std::endl;
+        cost = outputs[0].scalar<float>()(0);
+        std::cout << "Iteration: " << iter << ", Cost: " <<  cost << std::endl;
         TF_CHECK_OK(session->Run({{"x", x}, {"y", y}}, {}, {"train"}, nullptr)); // Train
         outputs.clear();
-    }
-
+        iter++;
+    }while( cost >= 0.01 * initial_cost );
 
     session->Close();
     delete session;
