@@ -46,7 +46,7 @@ filegroup(
 
 cc_binary(
     name = "loader",
-    srcs = [],
+    srcs = ["loader.cc"],
     copts = tf_copts() + [
         "-ffunction-sections",
         "-fdata-sections",
@@ -60,6 +60,8 @@ cc_binary(
         "-z defs",
         "-s",
         "-Wl,--gc-sections",
+        "-Wl,--version-script",
+        "//tensorflow/c:version_script.lds",
     ],
     linkstatic = 1,
     tags = [
@@ -68,6 +70,7 @@ cc_binary(
     ],
     deps = [
         "//tensorflow/c:c_api",
-        "//tensorflow/core:tensorflow_opensource",
+        "//tensorflow/core:android_tensorflow_lib",
+        "//tensorflow/c:version_script.lds",
     ],
 )
