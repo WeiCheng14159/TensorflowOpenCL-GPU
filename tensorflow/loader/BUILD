@@ -50,8 +50,12 @@ cc_binary(
     copts = tf_copts() + [
         "-ffunction-sections",
         "-fdata-sections",
+        "-fPIE",
+        "-pie", 
     ],
     linkopts = [
+        "-fPIE",
+        "-pie",
         "-landroid",
         "-latomic",
         "-ldl",
