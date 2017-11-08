@@ -9,4 +9,7 @@ bazel build :loader \
    --cxxopt="-std=c++11" \
    --jobs=4 
 
-adb push ../../bazel-bin/tensorflow/loader/loader /data/user/0/TF
+adb push ../../bazel-bin/tensorflow/loader/loader /data/local/tmp
+
+adb push models/mlp.pb /data/local/tmp
+
