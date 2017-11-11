@@ -724,3 +724,31 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       sha256 = "0799aa12db5260a499beb40f81744e760c59d055bfc5d271dd2c2ed4d5419faa",
       strip_prefix = "bazel-toolchains-9dbd803ad3b9447430a296810197b09b3a710956",
   )
+
+# Added by Cheng Wei, this is OpenCL driver for Xiaomi 6 running Android
+
+  native.new_http_archive(
+      name = "libopencl_archive",
+      urls = [
+           "https://github.com/supernovaremnant/Android-OpenCL-Driver/archive/99f7a5e8b6b551cd3dbd3509cc47870410376660.tar.gz",
+      ],
+      sha256 = "91f00a0cd92decc11a0009d4fab92af518236992c070f32b72d7e7bf677b93a4",
+      strip_prefix = "Android-OpenCL-Driver-99f7a5e8b6b551cd3dbd3509cc47870410376660",
+      build_file = str(Label("//third_party:libopencl.BUILD")),
+  )
+
+  native.bind(
+      name = "libopencl_32",
+      actual = "@libopencl_archive//:32-bit-version",
+  )
+
+  native.bind(
+      name = "libopencl_64",
+      actual = "@libopencl_archive//:64-bit-version",
+  )
+
+  native.bind(
+      name = "libopencl_header",
+      actual = "@libopencl_archive//:clheader",
+  )
+
