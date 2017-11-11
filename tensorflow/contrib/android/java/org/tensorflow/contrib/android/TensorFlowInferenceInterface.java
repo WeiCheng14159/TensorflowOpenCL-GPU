@@ -36,6 +36,7 @@ import org.tensorflow.Operation;
 import org.tensorflow.Session;
 import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlow;
+import org.tensorflow.Tensors;
 import org.tensorflow.types.UInt8;
 
 /**
@@ -287,6 +288,22 @@ public class TensorFlowInferenceInterface {
    * as many elements as that of the destination Tensor. If {@link src} has more elements than the
    * destination has capacity, the copy is truncated.
    */
+  public void feed(String inputName, boolean[] src, long... dims) {
+    byte[] b = new byte[src.length];
+    
+    for (int i = 0; i < src.length; i++) {
+      b[i] = src[i] ? (byte) 1 : (byte) 0;
+    }
+
+    addFeed(inputName, Tensor.create(Boolean.class, dims, ByteBuffer.wrap(b)));
+  }
+
+  /**
+   * Given a source array with shape {@link dims} and content {@link src}, copy the contents into
+   * the input Tensor with name {@link inputName}. The source array {@link src} must have at least
+   * as many elements as that of the destination Tensor. If {@link src} has more elements than the
+   * destination has capacity, the copy is truncated.
+   */
   public void feed(String inputName, float[] src, long... dims) {
     addFeed(inputName, Tensor.create(dims, FloatBuffer.wrap(src)));
   }
@@ -337,7 +354,7 @@ public class TensorFlowInferenceInterface {
    * a Java {@code String} (which is a sequence of characters).
    */
   public void feedString(String inputName, byte[] src) {
-    addFeed(inputName, Tensor.create(src));
+    addFeed(inputName, Tensors.create(src));
   }
 
   /**
@@ -346,7 +363,7 @@ public class TensorFlowInferenceInterface {
    * arbitrary sequence of bytes, not a Java {@code String} (which is a sequence of characters).
    */
   public void feedString(String inputName, byte[][] src) {
-    addFeed(inputName, Tensor.create(src));
+    addFeed(inputName, Tensors.create(src));
   }
 
   // Methods for taking a native Tensor and filling it with src from Java native IO buffers.
@@ -616,7 +633,7 @@ public class TensorFlowInferenceInterface {
   private List<String> feedNames = new ArrayList<String>();
   private List<Tensor<?>> feedTensors = new ArrayList<Tensor<?>>();
   private List<String> fetchNames = new ArrayList<String>();
-  private List<Tensor<?>> fetchTensors = null;
+  private List<Tensor<?>> fetchTensors = new ArrayList<Tensor<?>>();
 
   // Mutable state.
   private RunStats runStats;

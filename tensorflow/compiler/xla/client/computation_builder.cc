@@ -489,6 +489,16 @@ ComputationDataHandle ComputationBuilder::Collapse(
   }
   std::unique_ptr<Shape> original_shape = shape_or_status.ConsumeValueOrDie();
 
+  VLOG(3) << "original shape: " << ShapeUtil::HumanString(*original_shape);
+  VLOG(3) << "dims to collapse: "
+          << tensorflow::str_util::Join(dims_to_collapse, ",");
+
+  if (dims_to_collapse.size() <= 1) {
+    // Not collapsing anything, trivially we can return the operand versus
+    // enqueueing a trivial reshape.
+    return operand;
+  }
+
   std::vector<int64> new_sizes;
   for (int i = 0; i < ShapeUtil::Rank(*original_shape); ++i) {
     if (i <= dims_to_collapse.front() || i > dims_to_collapse.back()) {
@@ -497,6 +507,9 @@ ComputationDataHandle ComputationBuilder::Collapse(
       new_sizes.back() *= original_shape->dimensions(i);
     }
   }
+
+  VLOG(3) << "new sizes: [" << tensorflow::str_util::Join(new_sizes, ",")
+          << "]";
 
   return Reshape(operand, new_sizes);
 }
@@ -650,7 +663,7 @@ bool ComputationBuilder::VerifyConvolution(
     return false;
   }
   int num_dims = ShapeUtil::Rank(lhs_shape);
-  if (num_dims < 3) {
+  if (num_dims < 2) {
     NoteError(InvalidArgument(
         "Convolution expects argument arrays with >= 3 dimensions. "
         "Got: %s and %s",
@@ -900,6 +913,17 @@ ComputationDataHandle ComputationBuilder::CustomCall(
   return ParseOpResponse(s, &response);
 }
 
+ComputationDataHandle ComputationBuilder::Complex(
+    const ComputationDataHandle& real, const ComputationDataHandle& imag,
+    tensorflow::gtl::ArraySlice<int64> broadcast_dimensions) {
+  return BinaryOp(BINOP_COMPLEX, real, imag, broadcast_dimensions);
+}
+
+ComputationDataHandle ComputationBuilder::Conj(
+    const ComputationDataHandle& operand) {
+  return Complex(Real(operand), Neg(Imag(operand)));
+}
+
 ComputationDataHandle ComputationBuilder::Add(
     const ComputationDataHandle& lhs, const ComputationDataHandle& rhs,
     tensorflow::gtl::ArraySlice<int64> broadcast_dimensions) {
@@ -942,26 +966,50 @@ ComputationDataHandle ComputationBuilder::Min(
   return BinaryOp(BINOP_MIN, lhs, rhs, broadcast_dimensions);
 }
 
-ComputationDataHandle ComputationBuilder::LogicalAnd(
+ComputationDataHandle ComputationBuilder::And(
     const ComputationDataHandle& lhs, const ComputationDataHandle& rhs,
     tensorflow::gtl::ArraySlice<int64> broadcast_dimensions) {
-  return BinaryOp(BINOP_LOGICAL_AND, lhs, rhs, broadcast_dimensions);
+  return BinaryOp(BINOP_AND, lhs, rhs, broadcast_dimensions);
 }
 
-ComputationDataHandle ComputationBuilder::LogicalOr(
+ComputationDataHandle ComputationBuilder::Or(
     const ComputationDataHandle& lhs, const ComputationDataHandle& rhs,
     tensorflow::gtl::ArraySlice<int64> broadcast_dimensions) {
-  return BinaryOp(BINOP_LOGICAL_OR, lhs, rhs, broadcast_dimensions);
+  return BinaryOp(BINOP_OR, lhs, rhs, broadcast_dimensions);
 }
 
-ComputationDataHandle ComputationBuilder::LogicalNot(
+ComputationDataHandle ComputationBuilder::Not(
     const ComputationDataHandle& operand) {
-  return UnaryOp(UNOP_LOGICAL_NOT, operand);
+  return UnaryOp(UNOP_NOT, operand);
+}
+
+ComputationDataHandle ComputationBuilder::ShiftLeft(
+    const ComputationDataHandle& lhs, const ComputationDataHandle& rhs,
+    tensorflow::gtl::ArraySlice<int64> broadcast_dimensions) {
+  return BinaryOp(BINOP_SHIFT_LEFT, lhs, rhs, broadcast_dimensions);
+}
+
+ComputationDataHandle ComputationBuilder::ShiftRightArithmetic(
+    const ComputationDataHandle& lhs, const ComputationDataHandle& rhs,
+    tensorflow::gtl::ArraySlice<int64> broadcast_dimensions) {
+  return BinaryOp(BINOP_SHIFT_RIGHT_ARITHMETIC, lhs, rhs, broadcast_dimensions);
+}
+
+ComputationDataHandle ComputationBuilder::ShiftRightLogical(
+    const ComputationDataHandle& lhs, const ComputationDataHandle& rhs,
+    tensorflow::gtl::ArraySlice<int64> broadcast_dimensions) {
+  return BinaryOp(BINOP_SHIFT_RIGHT_LOGICAL, lhs, rhs, broadcast_dimensions);
 }
 
 ComputationDataHandle ComputationBuilder::Abs(
     const ComputationDataHandle& operand) {
   return UnaryOp(UNOP_ABS, operand);
+}
+
+ComputationDataHandle ComputationBuilder::Atan2(
+    const ComputationDataHandle& y, const ComputationDataHandle& x,
+    tensorflow::gtl::ArraySlice<int64> broadcast_dimensions) {
+  return BinaryOp(BINOP_ATAN2, y, x, broadcast_dimensions);
 }
 
 ComputationDataHandle ComputationBuilder::Exp(
@@ -1007,6 +1055,16 @@ ComputationDataHandle ComputationBuilder::Sin(
 ComputationDataHandle ComputationBuilder::Tanh(
     const ComputationDataHandle& operand) {
   return UnaryOp(UNOP_TANH, operand);
+}
+
+ComputationDataHandle ComputationBuilder::Real(
+    const ComputationDataHandle& operand) {
+  return UnaryOp(UNOP_REAL, operand);
+}
+
+ComputationDataHandle ComputationBuilder::Imag(
+    const ComputationDataHandle& operand) {
+  return UnaryOp(UNOP_IMAG, operand);
 }
 
 ComputationDataHandle ComputationBuilder::IsFinite(
@@ -1251,7 +1309,7 @@ Status ComputationBuilder::SetReturnValue(
 }
 
 StatusOr<bool> ComputationBuilder::IsConstant(
-    const ComputationDataHandle& operand) {
+    const ComputationDataHandle& operand, int64 num_parameters) {
   if (!first_error_.ok()) {
     return first_error_;
   }
@@ -1259,6 +1317,7 @@ StatusOr<bool> ComputationBuilder::IsConstant(
   IsConstantRequest request;
   *request.mutable_computation() = computation_.handle();
   *request.mutable_operand() = operand;
+  request.set_num_parameters(num_parameters);
   IsConstantResponse response;
 
   VLOG(2) << "making IsConstant request";
@@ -1272,7 +1331,8 @@ StatusOr<bool> ComputationBuilder::IsConstant(
 }
 
 StatusOr<std::unique_ptr<Literal>> ComputationBuilder::ComputeConstant(
-    const ComputationDataHandle& operand, const Layout* output_layout) {
+    const ComputationDataHandle& operand, const Layout* output_layout,
+    tensorflow::gtl::ArraySlice<Literal> parameters) {
   if (!first_error_.ok()) {
     return first_error_;
   }
@@ -1282,6 +1342,9 @@ StatusOr<std::unique_ptr<Literal>> ComputationBuilder::ComputeConstant(
   *request.mutable_operand() = operand;
   if (output_layout != nullptr) {
     *request.mutable_output_layout() = *output_layout;
+  }
+  for (const auto& param : parameters) {
+    *request.add_parameters() = param.ToProto();
   }
 
   ComputeConstantResponse response;
@@ -1433,10 +1496,20 @@ ComputationDataHandle ComputationBuilder::ReduceWindow(
     return ComputationDataHandle();
   }
 
-  return ReduceWindowWithGeneralPadding(
-      operand, init_value, computation, window_dimensions, window_strides,
+  Status padding_valid =
+      ValidatePaddingValues(AsInt64Slice(shape.ValueOrDie()->dimensions()),
+                            window_dimensions, window_strides);
+  if (!padding_valid.ok()) {
+    first_error_ = padding_valid;
+    return ComputationDataHandle();
+  }
+
+  std::vector<std::pair<int64, int64>> padding_values =
       MakePadding(AsInt64Slice(shape.ValueOrDie()->dimensions()),
-                  window_dimensions, window_strides, padding));
+                  window_dimensions, window_strides, padding);
+  return ReduceWindowWithGeneralPadding(operand, init_value, computation,
+                                        window_dimensions, window_strides,
+                                        padding_values);
 }
 
 ComputationDataHandle ComputationBuilder::ReduceWindowWithGeneralPadding(
@@ -1726,14 +1799,9 @@ StatusOr<Computation> ComputationBuilder::Build() {
 
 void ComputationBuilder::AddCommonFieldsToOpRequest(OpRequest* request) const {
   *request->mutable_metadata() = metadata_;
-  *request->mutable_device_assignment() = device_assignment_;
-}
-
-void ComputationBuilder::ClearDeviceAssignment() { device_assignment_.Clear(); }
-
-void ComputationBuilder::SetDeviceAssignment(
-    const OpDeviceAssignment& assignment) {
-  device_assignment_ = assignment;
+  if (sharding_) {
+    *request->mutable_sharding() = *sharding_;
+  }
 }
 
 /* static */ ConvolutionDimensionNumbers

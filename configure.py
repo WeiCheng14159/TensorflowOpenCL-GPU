@@ -25,12 +25,15 @@ import re
 import subprocess
 import sys
 
+# pylint: disable=g-import-not-at-top
 try:
   from shutil import which
 except ImportError:
   from distutils.spawn import find_executable as which
+# pylint: enable=g-import-not-at-top
 
-_TF_BAZELRC = '.tf_configure.bazelrc'
+_TF_BAZELRC = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           '.tf_configure.bazelrc')
 _DEFAULT_CUDA_VERSION = '8.0'
 _DEFAULT_CUDNN_VERSION = '6'
 _DEFAULT_CUDA_COMPUTE_CAPABILITIES = '3.5,5.2'
@@ -40,6 +43,7 @@ _DEFAULT_CUDA_PATH_WIN = ('C:/Program Files/NVIDIA GPU Computing '
                           'Toolkit/CUDA/v%s' % _DEFAULT_CUDA_VERSION)
 _TF_OPENCL_VERSION = '1.2'
 _DEFAULT_COMPUTECPP_TOOLKIT_PATH = '/usr/local/computecpp'
+_DEFAULT_TRISYCL_INCLUDE_DIR = '/usr/local/triSYCL/include'
 
 
 def is_windows():
@@ -484,7 +488,10 @@ def set_cc_opt_flags(environ_cp):
   cc_opt_flags = get_from_env_or_user_or_default(environ_cp, 'CC_OPT_FLAGS',
                                                  question, default_cc_opt_flags)
   for opt in cc_opt_flags.split():
-    write_to_bazelrc('build:opt --cxxopt=%s --copt=%s' % (opt, opt))
+    host_opt = '-march=native'  # It should be safe on the same build host.
+    write_to_bazelrc(
+        'build:opt --cxxopt=%s --copt=%s' % (opt, opt) +
+        ' --host_cxxopt=%s --host_copt=%s' % (host_opt, host_opt))
 
 
 def set_tf_cuda_clang(environ_cp):
@@ -634,7 +641,7 @@ def set_tf_cuda_version(environ_cp):
   write_action_env_to_bazelrc('TF_CUDA_VERSION', tf_cuda_version)
 
 
-def set_tf_cunn_version(environ_cp):
+def set_tf_cudnn_version(environ_cp):
   """Set CUDNN_INSTALL_PATH and TF_CUDNN_VERSION."""
   ask_cudnn_version = (
       'Please specify the cuDNN version you want to use. '
@@ -880,6 +887,27 @@ def set_computecpp_toolkit_path(environ_cp):
   write_action_env_to_bazelrc('COMPUTECPP_TOOLKIT_PATH',
                               computecpp_toolkit_path)
 
+def set_trisycl_include_dir(environ_cp):
+  """Set TRISYCL_INCLUDE_DIR"""
+  ask_trisycl_include_dir = ('Please specify the location of the triSYCL '
+                             'include directory. (Use --config=sycl_trisycl '
+                             'when building with Bazel) '
+                             '[Default is %s]: '
+                             ) % (_DEFAULT_TRISYCL_INCLUDE_DIR)
+  while True:
+    trisycl_include_dir = get_from_env_or_user_or_default(
+      environ_cp, 'TRISYCL_INCLUDE_DIR', ask_trisycl_include_dir,
+      _DEFAULT_TRISYCL_INCLUDE_DIR)
+    if os.path.exists(trisycl_include_dir):
+      break
+
+    print('Invalid triSYCL include directory, %s cannot be found'
+          % (trisycl_include_dir))
+
+  # Set TRISYCL_INCLUDE_DIR
+  environ_cp['TRISYCL_INCLUDE_DIR'] = trisycl_include_dir
+  write_action_env_to_bazelrc('TRISYCL_INCLUDE_DIR',
+                              trisycl_include_dir)
 
 def set_mpi_home(environ_cp):
   """Set MPI_HOME."""
@@ -962,6 +990,19 @@ def set_monolithic():
   write_to_bazelrc('build --define framework_shared_object=true')
 
 
+def create_android_bazelrc_configs():
+  # Flags for --config=android
+  write_to_bazelrc('build:android --crosstool_top=//external:android/crosstool')
+  write_to_bazelrc(
+      'build:android --host_crosstool_top=@bazel_tools//tools/cpp:toolchain')
+  # Flags for --config=android_arm
+  write_to_bazelrc('build:android_arm --config=android')
+  write_to_bazelrc('build:android_arm --cpu=armeabi-v7a')
+  # Flags for --config=android_arm64
+  write_to_bazelrc('build:android_arm64 --config=android')
+  write_to_bazelrc('build:android_arm64 --cpu=arm64-v8a')
+
+
 def main():
   # Make a copy of os.environ to be clear when functions and getting and setting
   # environment variables.
@@ -975,10 +1016,14 @@ def main():
   run_gen_git_source(environ_cp)
 
   if is_windows():
+    environ_cp['TF_NEED_S3'] = '0'
     environ_cp['TF_NEED_GCP'] = '0'
     environ_cp['TF_NEED_HDFS'] = '0'
     environ_cp['TF_NEED_JEMALLOC'] = '0'
+    environ_cp['TF_NEED_OPENCL_SYCL'] = '0'
+    environ_cp['TF_NEED_COMPUTECPP'] = '0'
     environ_cp['TF_NEED_OPENCL'] = '0'
+    environ_cp['TF_NEED_S3'] = '0'
     environ_cp['TF_CUDA_CLANG'] = '0'
 
   if is_macos():
@@ -987,9 +1032,11 @@ def main():
   set_build_var(environ_cp, 'TF_NEED_JEMALLOC', 'jemalloc as malloc',
                 'with_jemalloc', True)
   set_build_var(environ_cp, 'TF_NEED_GCP', 'Google Cloud Platform',
-                'with_gcp_support', False, 'gcp')
+                'with_gcp_support', True, 'gcp')
   set_build_var(environ_cp, 'TF_NEED_HDFS', 'Hadoop File System',
-                'with_hdfs_support', False, 'hdfs')
+                'with_hdfs_support', True, 'hdfs')
+  set_build_var(environ_cp, 'TF_NEED_S3', 'Amazon S3 File System',
+                'with_s3_support', True, 's3')
   set_build_var(environ_cp, 'TF_ENABLE_XLA', 'XLA JIT', 'with_xla_support',
                 False, 'xla')
   set_build_var(environ_cp, 'TF_NEED_GDR', 'GDR', 'with_gdr_support',
@@ -997,17 +1044,21 @@ def main():
   set_build_var(environ_cp, 'TF_NEED_VERBS', 'VERBS', 'with_verbs_support',
                 False, 'verbs')
 
-  set_action_env_var(environ_cp, 'TF_NEED_OPENCL', 'OpenCL', False)
-  if environ_cp.get('TF_NEED_OPENCL') == '1':
+  set_action_env_var(environ_cp, 'TF_NEED_OPENCL_SYCL', 'OpenCL SYCL', False)
+  if environ_cp.get('TF_NEED_OPENCL_SYCL') == '1':
     set_host_cxx_compiler(environ_cp)
     set_host_c_compiler(environ_cp)
-    set_computecpp_toolkit_path(environ_cp)
+    set_action_env_var(environ_cp, 'TF_NEED_COMPUTECPP', 'ComputeCPP', True)
+    if environ_cp.get('TF_NEED_COMPUTECPP') == '1':
+      set_computecpp_toolkit_path(environ_cp)
+    else:
+      set_trisycl_include_dir(environ_cp)
 
   set_action_env_var(environ_cp, 'TF_NEED_CUDA', 'CUDA', False)
   if (environ_cp.get('TF_NEED_CUDA') == '1' and
       'TF_CUDA_CONFIG_REPO' not in environ_cp):
     set_tf_cuda_version(environ_cp)
-    set_tf_cunn_version(environ_cp)
+    set_tf_cudnn_version(environ_cp)
     set_tf_cuda_compute_capabilities(environ_cp)
 
     set_tf_cuda_clang(environ_cp)
@@ -1029,7 +1080,7 @@ def main():
   set_cc_opt_flags(environ_cp)
   set_mkl()
   set_monolithic()
-
+  create_android_bazelrc_configs()
 
 if __name__ == '__main__':
   main()

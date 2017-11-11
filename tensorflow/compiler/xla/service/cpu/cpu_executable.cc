@@ -51,8 +51,9 @@ namespace cpu {
 
 CpuExecutable::CpuExecutable(
     std::unique_ptr<SimpleOrcJIT> jit,
-    std::unique_ptr<BufferAssignment> assignment,
-    std::unique_ptr<HloModule> hlo_module, const string& entry_function_name,
+    std::unique_ptr<const BufferAssignment> assignment,
+    std::unique_ptr<const HloModule> hlo_module,
+    const string& entry_function_name,
     std::unordered_map<const HloInstruction*, size_t> hlo_to_profile_idx)
     : Executable(std::move(hlo_module)),
       jit_(std::move(jit)),
@@ -233,7 +234,7 @@ Status CpuExecutable::ExecuteComputeFunction(
     for (auto hlo_prof_idx : hlo_to_profile_idx_) {
       const HloInstruction* hlo = hlo_prof_idx.first;
       uint64 cycles_taken = profile_counters[hlo_prof_idx.second];
-      hlo_execution_profile->AddProfileResult(hlo, cycles_taken);
+      hlo_execution_profile->SetCyclesTakenBy(hlo, cycles_taken);
     }
   }
   return Status::OK();
