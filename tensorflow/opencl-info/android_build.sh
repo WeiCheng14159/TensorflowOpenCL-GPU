@@ -1,6 +1,8 @@
 #!/bin/bash
 
-bazel build :opencl-info \
+TARGET=${PWD##*/} 
+
+bazel build :$TARGET \
    --verbose_failures \
    --sandbox_debug \
    --crosstool_top=//external:android/crosstool \
@@ -9,4 +11,4 @@ bazel build :opencl-info \
    --cxxopt="-std=c++11" \
    --jobs=4 
 
-adb push ../../bazel-bin/tensorflow/opencl-info/opencl-info /data/local/tmp
+adb push ../../bazel-bin/tensorflow/$TARGET/$TARGET /data/local/tmp
