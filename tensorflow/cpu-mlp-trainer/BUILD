@@ -1,7 +1,3 @@
-# Description:
-#   Graph Loader program for android 
-# /media/chengwei/disk2/tensorflow-build/target/tensorflow/tensorflow/loader
-
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])  # Apache 2.0
@@ -12,15 +8,6 @@ load(
     "//tensorflow:tensorflow.bzl",
     "tf_copts",
     "if_android_arm64",
-)
-
-filegroup(
-    name = "loader_srcs",
-    srcs = glob([
-        "**/*.cc",
-        "**/*.h",
-    ]),
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -45,8 +32,8 @@ filegroup(
 #   --cpu=armeabi-v7a
 
 cc_binary(
-    name = "loader",
-    srcs = ["loader.cc"],
+    name = "cpu-mlp-trainer",
+    srcs = ["cpu-mlp-trainer.cc"],
     copts = tf_copts() + [
         "-ffunction-sections",
         "-fdata-sections",
