@@ -867,3 +867,21 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       actual = "@libopencl_archive//:clheader",
   )
 
+# Added by Cheng Wei, this is the OpenCL implementation of SYCL 1.2 
+# running on Adreno 540 GPU 
+
+  native.new_http_archive(
+      name = "libsycl_gtx_archive",
+      urls = [
+           "https://github.com/supernovaremnant/sycl-gtx/archive/85be4056dc45195fca7f320e96431e915aa6c255.tar.gz",
+      ],
+      sha256 = "2d25868bde3aa0376f2eb479eeff15ddf7b894bca6290d281e9eec101c0aaee1",
+      strip_prefix = "sycl-gtx-85be4056dc45195fca7f320e96431e915aa6c255/sycl-gtx",
+      build_file = str(Label("//third_party:libsycl-gtx.BUILD")),
+  )
+
+  native.bind(
+      name = "libsycl",
+      actual = "@libsycl_gtx_archive//:sycl-lib",
+  )
+
