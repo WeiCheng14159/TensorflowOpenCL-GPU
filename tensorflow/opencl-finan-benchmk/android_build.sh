@@ -1,6 +1,7 @@
 #!/bin/bash
 
-TARGET=opencl-finan-black-scholes
+TARGET=opencl-monte-carlo-bench
+DIR=${PWD##*/} 
 
 bazel build :$TARGET \
    --verbose_failures \
@@ -8,8 +9,9 @@ bazel build :$TARGET \
    --crosstool_top=//external:android/crosstool \
    --host_crosstool_top=@bazel_tools//tools/cpp:toolchain \
    --cpu=arm64-v8a \
-   --cxxopt="-std=c++11" \
    --jobs=4 
 
-adb push ../../bazel-bin/tensorflow/"$TARGET"/"$TARGET" /data/local/tmp
+adb push ../../bazel-bin/tensorflow/"$DIR"/"$TARGET" /data/local/tmp
 adb push ./kernel/*cl /data/local/tmp
+adb push ./Monte-Carlo/*.h /data/local/tmp
+

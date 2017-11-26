@@ -52,7 +52,7 @@ void getSequenceCpu(float* sequence, float sampleNum);
 
 float getProcessValX0Cpu(monteCarloOptionStruct optionStruct);
 
-void getPathCpu(float* path, size_t sampleNum, float dt, int numSample, monteCarloOptionStruct optionStruct);
+void getPathCpu(float* path, size_t sampleNum, float dt, monteCarloOptionStruct optionStruct);
 	
 
 float getPriceCpu(float val);

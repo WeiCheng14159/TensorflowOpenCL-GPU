@@ -12,7 +12,7 @@
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
-#include <CL/cl.h>
+#include "CL/cl.h"
 #endif
 
 #include "mt19937.c"
@@ -108,7 +108,7 @@ void cl_initialization()
 	
 	// Create an OpenCL context
 	clGPUContext = clCreateContext( NULL, 1, &device_id, NULL, NULL, &errcode);
-	if(errcode != CL_SUCCESS) printf("Error in creating context\n");
+	if(errcode != CL_SUCCESS) printf("Error in creating contenumSampsxt\n");
  
 	//Create a command-queue
 	clCommandQue = clCreateCommandQueue(clGPUContext, device_id, 0, &errcode);
@@ -174,12 +174,12 @@ void initializeInputs(dataType* samplePrices, dataType* sampleWeights, dataType*
 //run monte carlo...
 void runMonteCarlo()
 {
-	//int nSamplesArray[] = {100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000};//, 					1000000, 2000000};//, 5000000};//, 10000000, 20000000};
+	int nSamplesArray[] = {100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000};//, 					1000000, 2000000};//, 5000000};//, 10000000, 20000000};
 
-	int numSamples = 400000;
-	//for (int numTime=0; numTime < 12; numTime++)
+	//int numSamples = 400000;
+	for (int numTime=0; numTime < 8; numTime++)
 	{
-		//int numSamples = nSamplesArray[numTime];
+		int numSamples = nSamplesArray[numTime];
 
 		cl_initialization();
 	
@@ -273,7 +273,7 @@ void runMonteCarlo()
 
 		
 
-		size_t localWorkSize[] = {256, 1};
+		size_t localWorkSize[] = {16, 1};
 		size_t globalWorkSize[] = {(size_t)ceil((dataType)numSamples / (dataType)localWorkSize[0])*localWorkSize[0], 1};
 		
 		unsigned long seed = rand();
