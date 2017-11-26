@@ -15,9 +15,20 @@ limitations under the License.
 #ifndef THIRD_PARTY_TENSORFLOW_CONTRIB_LITE_TOOLS_MUTABLE_OP_RESOLVER_H_
 #define THIRD_PARTY_TENSORFLOW_CONTRIB_LITE_TOOLS_MUTABLE_OP_RESOLVER_H_
 
-#include <unordered_map>
+#include <map>
 #include "tensorflow/contrib/lite/context.h"
 #include "tensorflow/contrib/lite/model.h"
+
+// Needed to resolve unordered_set hash on older compilers.
+namespace std
+{
+template<>
+  struct hash<tflite::BuiltinOperator> {
+    size_t operator()(const tflite::BuiltinOperator &op) const {
+      return std::hash<int>()(op);
+    }
+  };
+}
 
 namespace tflite {
 
@@ -36,8 +47,8 @@ class MutableOpResolver : public OpResolver {
   void AddCustom(const char* name, TfLiteRegistration* registration);
 
  private:
-  std::unordered_map<tflite::BuiltinOperator, TfLiteRegistration*> builtins_;
-  std::unordered_map<std::string, TfLiteRegistration*> custom_ops_;
+  std::map<tflite::BuiltinOperator, TfLiteRegistration*> builtins_;
+  std::map<std::string, TfLiteRegistration*> custom_ops_;
 };
 
 }  // namespace tflite

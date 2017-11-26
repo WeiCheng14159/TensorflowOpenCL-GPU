@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TARGET=opencl-benchmark
+TARGET=${PWD##*/} 
 
 bazel build :$TARGET \
    --verbose_failures \
