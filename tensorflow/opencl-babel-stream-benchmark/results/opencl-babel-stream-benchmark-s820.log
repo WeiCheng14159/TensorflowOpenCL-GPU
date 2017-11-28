@@ -1,0 +1,15 @@
+BabelStream
+Version: 3.3
+Running kernels 100 times
+Precision: float
+Array size: 134.2 MB (=0.1 GB)
+Total size: 402.7 MB (=0.4 GB)
+Using OpenCL device QUALCOMM Adreno(TM)
+Driver: OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch:  Compiler E031.29.00.03
+Reduction kernel config: 4 groups of size 256
+Function    MBytes/sec  Min (sec)   Max         Average     
+Copy        17467.441   0.01537     0.05656     0.01773     
+Mul         17449.758   0.01538     0.02379     0.01718     
+Add         17154.671   0.02347     0.05865     0.02562     
+Triad       17052.995   0.02361     0.02838     0.02553     
+Dot         13986.590   0.01919     0.03572     0.02160     
