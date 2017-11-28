@@ -1,0 +1,55 @@
+clDeviceQuery Starting...
+
+1 OpenCL Platforms found
+
+ CL_PLATFORM_NAME: 	QUALCOMM Snapdragon(TM)
+ CL_PLATFORM_VERSION: 	OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: 
+OpenCL Device Info:
+
+ 1 devices found supporting OpenCL on: QUALCOMM Snapdragon(TM)
+
+ ----------------------------------
+ Device QUALCOMM Adreno(TM)
+ ---------------------------------
+  CL_DEVICE_NAME: 			QUALCOMM Adreno(TM)
+  CL_DEVICE_VENDOR: 			QUALCOMM
+  CL_DRIVER_VERSION: 			OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch:  Compiler E031.29.00.03
+  CL_DEVICE_TYPE:			CL_DEVICE_TYPE_GPU
+  CL_DEVICE_MAX_COMPUTE_UNITS:		4
+  CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS:	3
+  CL_DEVICE_MAX_WORK_ITEM_SIZES:	1024 / 1024 / 1024 
+  CL_DEVICE_MAX_WORK_GROUP_SIZE:	1024
+  CL_DEVICE_MAX_CLOCK_FREQUENCY:	1 MHz
+  CL_DEVICE_ADDRESS_BITS:		64
+  CL_DEVICE_MAX_MEM_ALLOC_SIZE:		330 MByte
+  CL_DEVICE_GLOBAL_MEM_SIZE:		1322 MByte
+  CL_DEVICE_ERROR_CORRECTION_SUPPORT:	no
+  CL_DEVICE_LOCAL_MEM_TYPE:		local
+  CL_DEVICE_LOCAL_MEM_SIZE:		32 KByte
+  CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE:	64 KByte
+  CL_DEVICE_QUEUE_PROPERTIES:		CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE
+  CL_DEVICE_QUEUE_PROPERTIES:		CL_QUEUE_PROFILING_ENABLE
+  CL_DEVICE_IMAGE_SUPPORT:		1
+  CL_DEVICE_MAX_READ_IMAGE_ARGS:	128
+  CL_DEVICE_MAX_WRITE_IMAGE_ARGS:	64
+
+  CL_DEVICE_IMAGE <dim>			2D_MAX_WIDTH	 16384
+					2D_MAX_HEIGHT	 16384
+					3D_MAX_WIDTH	 16384
+					3D_MAX_HEIGHT	 16384
+					3D_MAX_DEPTH	 2048
+  CL_DEVICE_PREFERRED_VECTOR_WIDTH_<t>	CHAR 1, SHORT 1, INT 1, FLOAT 1, DOUBLE 1
+
+
+clDeviceQuery, Platform Name = QUALCOMM Snapdragon(TM), Platform Version = OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: , NumDevs = 1, Device = QUALCOMM Adreno(TM)
+
+System Info: 
+
+ Local Time/Date =  13:56:32, 11/28/2017
+ CPU Name: none
+ # of CPU processors: 4
+ Linux version 3.18.20-g40ad06f-00025-g820397d (git@build2) (gcc version 4.9.x-google 20140827 (prerelease) (GCC) ) #1 SMP PREEMPT Thu Jun 9 15:27:03 PDT 2016
+
+
+TEST PASSED
+
