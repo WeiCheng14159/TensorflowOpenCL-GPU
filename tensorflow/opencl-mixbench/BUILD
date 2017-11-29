@@ -35,7 +35,7 @@ cc_library(
 )
 
 cc_binary(
-    name = "opencl-benchmark",
+    name = "opencl-mixbench",
     srcs = [
         "main-ocl.cpp",
     ],
