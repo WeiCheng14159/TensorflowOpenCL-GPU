@@ -1,0 +1,130 @@
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 100
+
+Run on GPU
+Average price on GPU: 7.745453
+Processing time on GPU: 18.666000 (ms)
+
+Run on CPU
+Processing time on CPU: 6.967000 (ms)
+Average price on CPU: 8.997573
+
+GPU Speedup: 0.373245
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 200
+
+Run on GPU
+Average price on GPU: 8.146961
+Processing time on GPU: 21.354000 (ms)
+
+Run on CPU
+Processing time on CPU: 12.597000 (ms)
+Average price on CPU: 8.779194
+
+GPU Speedup: 0.589913
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 500
+
+Run on GPU
+Average price on GPU: 8.157648
+Processing time on GPU: 24.226000 (ms)
+
+Run on CPU
+Processing time on CPU: 30.785000 (ms)
+Average price on CPU: 8.519599
+
+GPU Speedup: 1.270742
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 1000
+
+Run on GPU
+Average price on GPU: 8.084008
+Processing time on GPU: 38.091999 (ms)
+
+Run on CPU
+Processing time on CPU: 61.723000 (ms)
+Average price on CPU: 8.015563
+
+GPU Speedup: 1.620366
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 2000
+
+Run on GPU
+Average price on GPU: 8.183969
+Processing time on GPU: 64.955002 (ms)
+
+Run on CPU
+Processing time on CPU: 136.158005 (ms)
+Average price on CPU: 8.033329
+
+GPU Speedup: 2.096190
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 5000
+
+Run on GPU
+Average price on GPU: 8.073774
+Processing time on GPU: 139.744995 (ms)
+
+Run on CPU
+Processing time on CPU: 321.885986 (ms)
+Average price on CPU: 8.127137
+
+GPU Speedup: 2.303381
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 10000
+
+Run on GPU
+Average price on GPU: 7.996595
+Processing time on GPU: 269.600006 (ms)
+
+Run on CPU
+Processing time on CPU: 607.693970 (ms)
+Average price on CPU: 8.010756
+
+GPU Speedup: 2.254058
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 20000
+
+Run on GPU
+Average price on GPU: 8.065034
+Processing time on GPU: 523.426025 (ms)
+
+Run on CPU
+Processing time on CPU: 1207.906006 (ms)
+Average price on CPU: 8.049747
+
+GPU Speedup: 2.307692
+
+
