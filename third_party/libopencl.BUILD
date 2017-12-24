@@ -26,6 +26,6 @@ cc_library(
     name = "clheader",
     hdrs = glob([
         "CL/**",
-        "cl2.hpp",
+        "*.hpp",
     ]),
 )
