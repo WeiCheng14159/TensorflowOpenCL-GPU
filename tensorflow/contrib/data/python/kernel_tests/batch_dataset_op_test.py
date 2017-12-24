@@ -577,7 +577,7 @@ class BatchDatasetTest(test.TestCase):
     self.assertEqual([None], dataset.output_shapes[1][0].as_list())
     self.assertEqual([None, 30], dataset.output_shapes[1][1].as_list())
 
-  def testBatchAndMapDataset(self):
+  def _testBatchAndMapDatasetHelper(self, num_parallel_batches=1):
     """Test a dataset that maps a TF function across its input elements."""
     # The pipeline is TensorSliceDataset ->
     # RepeatDataset(count) -> BatchAndMapDataset(square_3, batch_size).
@@ -593,7 +593,10 @@ class BatchDatasetTest(test.TestCase):
 
     iterator = (
         dataset_ops.Dataset.from_tensor_slices(components).repeat(count).apply(
-            batching.map_and_batch(_map_fn, batch_size))
+            batching.map_and_batch(
+                map_func=_map_fn,
+                batch_size=batch_size,
+                num_parallel_batches=num_parallel_batches))
         .make_initializable_iterator())
     init_op = iterator.initializer
     get_next = iterator.get_next()
@@ -627,7 +630,11 @@ class BatchDatasetTest(test.TestCase):
           for j in range(8):
             self.assertAllEqual(component[(i * 8 + j) % 7]**2,
                                 result_component[j])
-      # The last batch should fail with `OutOfRange`.
+      result = sess.run(get_next)
+      for component, result_component in zip(components, result):
+        for j in range((14 * 7) % 8):
+          self.assertAllEqual(component[((num_batches - 1) * 8 + j) % 7]**2,
+                              result_component[j])
       with self.assertRaises(errors.OutOfRangeError):
         sess.run(get_next)
 
@@ -639,6 +646,12 @@ class BatchDatasetTest(test.TestCase):
       # Empty batch should be an initialization time error.
       with self.assertRaises(errors.InvalidArgumentError):
         sess.run(init_op, feed_dict={count: 14, batch_size: 0})
+
+  def testBatchAndMapDataset(self):
+    return self._testBatchAndMapDatasetHelper()
+
+  def testBatchAndMapDatasetWithParallelBatching(self):
+    return self._testBatchAndMapDatasetHelper(num_parallel_batches=10)
 
   def testMapAndBatchSparse(self):
 
@@ -721,6 +734,20 @@ class BatchDatasetSerializationTest(
         lambda: self.build_dataset(15.0, tensor_slice_len, batch_size),
         lambda: self.build_dataset(20.0, tensor_slice_len, batch_size),
         num_outputs)
+
+  def _build_dataset_dense_to_sparse(self, components):
+    return dataset_ops.Dataset.from_tensor_slices(components).map(
+        lambda x: array_ops.fill([x], x)).apply(
+            batching.dense_to_sparse_batch(4, [12]))
+
+  def testDenseToSparseBatchDatasetCore(self):
+    components = np.random.randint(5, size=(40,)).astype(np.int32)
+    diff_comp = np.random.randint(2, size=(100,)).astype(np.int32)
+
+    num_outputs = len(components) // 4
+    self.run_core_tests(lambda: self._build_dataset_dense_to_sparse(components),
+                        lambda: self._build_dataset_dense_to_sparse(diff_comp),
+                        num_outputs)
 
 
 class PaddedBatchDatasetSerializationTest(
