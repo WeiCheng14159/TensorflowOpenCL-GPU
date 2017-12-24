@@ -146,8 +146,55 @@ void clPrintDevInfo(cl_device_id device) {
   clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG, sizeof(cl_uint), &vec_width[3], NULL);
   clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, sizeof(cl_uint), &vec_width[4], NULL);
   clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &vec_width[5], NULL);
-  printf("CHAR %u, SHORT %u, INT %u, FLOAT %u, DOUBLE %u\n\n\n",
+  printf("CHAR %u, SHORT %u, INT %u, FLOAT %u, DOUBLE %u\n",
    vec_width[0], vec_width[1], vec_width[2], vec_width[3], vec_width[4]);
+    
+  //CL_DEVICE_SVM_CAPABILITIES
+    /*
+    Describes the various shared virtual memory (a.k.a. SVM) 
+    memory allocation types the device supports. Coarse-grain 
+    SVM allocations are required to be supported by all OpenCL 
+    2.0 devices. This is a bit-field that describes a combination 
+    of the following values:
+
+    CL_DEVICE_SVM_COARSE_GRAIN_BUFFER – Support for coarse-grain buffer 
+    sharing using clSVMAlloc. Memory consistency is guaranteed at synchronization 
+    points and the host must use calls to 
+    clEnqueueMapBuffer and clEnqueueUnmapMemObject.
+
+    CL_DEVICE_SVM_FINE_GRAIN_BUFFER – Support for fine-grain 
+    buffer sharing using clSVMAlloc. Memory consistency is guaranteed 
+    at synchronization points without need for clEnqueueMapBuffer 
+    and clEnqueueUnmapMemObject.
+
+    CL_DEVICE_SVM_FINE_GRAIN_SYSTEM – Support for sharing the
+    host’s entire virtual memory including memory allocated using 
+    malloc. Memory consistency is guaranteed at synchronization points.
+
+    CL_DEVICE_SVM_ATOMICS – Support for the OpenCL 2.0 atomic operations 
+    that provide memory consistency across the host and all OpenCL 
+    devices supporting fine-grain SVM allocations.
+
+    The mandated minimum capability is CL_DEVICE_SVM_COARSE_GRAIN_BUFFER.
+    */
+    cl_device_svm_capabilities svm_cap; 
+    clGetDeviceInfo(device, CL_DEVICE_SVM_CAPABILITIES, sizeof(svm_cap), &svm_cap, NULL);
+    
+    char svm_cap_string[1024] = "";
+
+    if( svm_cap == CL_DEVICE_SVM_COARSE_GRAIN_BUFFER )
+        strcpy(svm_cap_string, "CL_DEVICE_SVM_COARSE_GRAIN_BUFFER"); 
+    else if(svm_cap == CL_DEVICE_SVM_FINE_GRAIN_BUFFER )
+        strcpy(svm_cap_string, "CL_DEVICE_SVM_FINE_GRAIN_BUFFER"); 
+    else if(svm_cap == CL_DEVICE_SVM_FINE_GRAIN_SYSTEM )
+        strcpy(svm_cap_string, "CL_DEVICE_SVM_FINE_GRAIN_SYSTEM"); 
+    else if(svm_cap == CL_DEVICE_SVM_ATOMICS )
+        strcpy(svm_cap_string, "CL_DEVICE_SVM_ATOMICS"); 
+    else
+        strcpy(svm_cap_string, "err"); 
+    printf("  CL_DEVICE_SVM_CAPABILITIES: \t%s\n", svm_cap_string);
+
+    printf("\n\n\n");
 }
 
 
