@@ -80,8 +80,28 @@ void clPrintDevInfo(cl_device_id device) {
   // CL_DEVICE_GLOBAL_MEM_SIZE
   cl_ulong mem_size;
   clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(mem_size), &mem_size, NULL);
-  printf("  CL_DEVICE_GLOBAL_MEM_SIZE:\t\t%u MByte\n", (unsigned int)(mem_size / (1024 * 1024)));
+  printf("  CL_DEVICE_GLOBAL_MEM_SIZE:\t\t%u MByte\n", (unsigned int)(mem_size / (1024*1024)));
+    
+  // CL_DEVICE_GLOBAL_MEM_CACHE_TYPE
+  cl_device_mem_cache_type global_mem_type;
+  clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_CACHE_TYPE, sizeof(global_mem_type), &global_mem_type, NULL);
+  if ( global_mem_type == CL_NONE )
+    printf("  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_NONE\n" );   
+  else if( global_mem_type == CL_READ_ONLY_CACHE )
+    printf("  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_READ_ONLY_CACHE\n" );   
+  else if( global_mem_type == CL_READ_WRITE_CACHE )
+    printf("  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_READ_WRITE_CACHE\n" );   
+ 
+  // CL_DEVICE_GLOBAL_MEM_CACHE_SIZE
+  cl_ulong global_mem_cache_size;
+  clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, sizeof(global_mem_cache_size), &global_mem_cache_size, NULL);
+  printf("  CL_DEVICE_GLOBAL_MEM_CACHE_SIZE:      %u KByte\n", (unsigned int)(global_mem_cache_size)/(1024));
 
+  // CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE
+  cl_uint mem_cacheline_size; 
+  clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE, sizeof(mem_cacheline_size), &mem_cacheline_size, NULL);
+  printf("  CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE:  %u Byte\n", (unsigned int)(mem_cacheline_size));
+  
   // CL_DEVICE_ERROR_CORRECTION_SUPPORT
   cl_bool error_correction_support;
   clGetDeviceInfo(device, CL_DEVICE_ERROR_CORRECTION_SUPPORT, sizeof(error_correction_support), &error_correction_support, NULL);
@@ -194,6 +214,7 @@ void clPrintDevInfo(cl_device_id device) {
         strcpy(svm_cap_string, "err"); 
     printf("  CL_DEVICE_SVM_CAPABILITIES: \t%s\n", svm_cap_string);
 
+    
     printf("\n\n\n");
 }
 
