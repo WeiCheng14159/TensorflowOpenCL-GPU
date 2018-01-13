@@ -1,58 +1,130 @@
-mixbench-ocl/alternating (v0.02-49-gedc8163)
-Use "-h" argument to see available options
------------------------- Device specifications ------------------------
-Platform:            QUALCOMM Snapdragon(TM)
-Device:              QUALCOMM Adreno(TM)/QUALCOMM
-Driver version:      OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch:  Compiler E031.33.00.04
-Address bits:        64
-GPU clock rate:      1 MHz
-Total global mem:    2862 MB
-Max allowed buffer:  715 MB
-OpenCL version:      OpenCL 2.0 Adreno(TM) 540
-Total CUs:           4
------------------------------------------------------------------------
-Buffer size:            64MB
-Workgroup size:         256
-Workitem stride:        Workgroup
-Buffer allocation:      Host allocated
-Timer:                  CL event based
-Warning:                Double precision computations are not supported
-Loading kernel source file...
-Precompilation of kernels... [                                 ]\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->\|->
------------------------------------------------------------------------------ CSV data -----------------------------------------------------------------------------
-Experiment ID, Single Precision ops,,,,              Double precision ops,,,,              Half precision ops,,,,                Integer operations,,, 
-Compute iters, Flops/byte, ex.time,  GFLOPS, GB/sec, Flops/byte, ex.time,  GFLOPS, GB/sec, Flops/byte, ex.time,  GFLOPS, GB/sec, Iops/byte, ex.time,   GIOPS, GB/sec
-            0,      0.000,11430.96,    0.00,   0.75,      0.000,    0.00,     nan,    inf,      0.000,11460.63,    0.00,   0.75,     0.000, 1000.95,    0.00,   8.58
-            1,      0.129,13961.88,    0.08,   0.60,      0.065,    0.00,     inf,    inf,      0.258,13921.81,    0.15,   0.60,     0.129, 1109.13,    0.97,   7.50
-            2,      0.267,13684.14,    0.16,   0.59,      0.133,    0.00,     inf,    inf,      0.533,13529.90,    0.32,   0.60,     0.267, 1061.79,    2.02,   7.58
-            3,      0.414,13154.42,    0.24,   0.59,      0.207,    0.00,     inf,    inf,      0.828,13109.23,    0.49,   0.59,     0.414, 1034.02,    3.12,   7.53
-            4,      0.571,12841.12,    0.33,   0.59,      0.286,    0.00,     inf,    inf,      1.143,12865.08,    0.67,   0.58,     0.571, 1018.05,    4.22,   7.38
-            5,      0.741,12435.30,    0.43,   0.58,      0.370,    0.00,     inf,    inf,      1.481,12625.89,    0.85,   0.57,     0.741, 1034.47,    5.19,   7.01
-            6,      0.923,12153.09,    0.53,   0.57,      0.462,    0.00,     inf,    inf,      1.846,11980.01,    1.08,   0.58,     0.923,  971.84,    6.63,   7.18
-            7,      1.120,11719.88,    0.64,   0.57,      0.560,    0.00,     inf,    inf,      2.240,11659.24,    1.29,   0.58,     1.120,  940.21,    7.99,   7.14
-            8,      1.333,11416.01,    0.75,   0.56,      0.667,    0.00,     inf,    inf,      2.667,11393.72,    1.51,   0.57,     1.333,  916.83,    9.37,   7.03
-            9,      1.565,10993.65,    0.88,   0.56,      0.783,    0.00,     inf,    inf,      3.130,10925.12,    1.77,   0.57,     1.565,  881.70,   10.96,   7.00
-           10,      1.818,10772.13,    1.00,   0.55,      0.909,    0.00,     inf,    inf,      3.636,10803.40,    1.99,   0.55,     1.818,  870.97,   12.33,   6.78
-           11,      2.095,10343.56,    1.14,   0.54,      1.048,    0.00,     inf,    inf,      4.190,10222.93,    2.31,   0.55,     2.095,  904.38,   13.06,   6.23
-           12,      2.400,  320.35,   40.22,  16.76,      1.200,    0.00,     inf,    inf,      4.800,  364.35,   70.73,  14.74,     2.400,  385.64,   33.41,  13.92
-           13,      2.737,  309.06,   45.16,  16.50,      1.368,    0.00,     inf,    inf,      5.474,  351.68,   79.38,  14.50,     2.737,  384.45,   36.31,  13.27
-           14,      3.111,  297.65,   50.50,  16.23,      1.556,    0.00,     inf,    inf,      6.222,  341.06,   88.15,  14.17,     3.111,  387.11,   38.83,  12.48
-           15,      3.529,  287.32,   56.06,  15.88,      1.765,    0.00,     inf,    inf,      7.059,  329.77,   97.68,  13.84,     3.529,  389.20,   41.38,  11.73
-           16,      4.000,  260.01,   66.07,  16.52,      2.000,    0.00,     inf,    inf,      8.000,  303.65,  113.15,  14.14,     4.000,  334.03,   51.43,  12.86
-           17,      4.533,  254.07,   71.84,  15.85,      2.267,    0.00,     inf,    inf,      9.067,  300.28,  121.58,  13.41,     4.533,  337.54,   54.08,  11.93
-           18,      5.143,  246.67,   78.35,  15.24,      2.571,    0.00,     inf,    inf,     10.286,  291.30,  132.70,  12.90,     5.143,  346.29,   55.81,  10.85
-           19,      5.846,  263.99,   77.28,  13.22,      2.923,    0.00,     inf,    inf,     11.692,  304.42,  134.03,  11.46,     5.846,  444.72,   45.87,   7.85
-           20,      6.667,  257.86,   83.28,  12.49,      3.333,    0.00,     inf,    inf,     13.333,  297.71,  144.26,  10.82,     6.667,  455.52,   47.14,   7.07
-           21,      7.636,  250.96,   89.85,  11.77,      3.818,    0.00,     inf,    inf,     15.273,  288.61,  156.25,  10.23,     7.636,  466.03,   48.38,   6.34
-           22,      8.800,  247.18,   95.57,  10.86,      4.400,    0.00,     inf,    inf,     17.600,  284.67,  165.96,   9.43,     8.800,  480.83,   49.13,   5.58
-           23,     10.222,  243.88,  101.26,   9.91,      5.111,    0.00,     inf,    inf,     20.444,  281.38,  175.53,   8.59,    10.222,  492.21,   50.17,   4.91
-           24,     12.000,  236.51,  108.96,   9.08,      6.000,    0.00,     inf,    inf,     24.000,  278.88,  184.81,   7.70,    12.000,  499.28,   51.61,   4.30
-           25,     14.286,  237.34,  113.10,   7.92,      7.143,    0.00,     inf,    inf,     28.571,  281.62,  190.63,   6.67,    14.286,  510.64,   52.57,   3.68
-           26,     17.333,  236.88,  117.85,   6.80,      8.667,    0.00,     inf,    inf,     34.667,  280.58,  199.00,   5.74,    17.333,  523.06,   53.37,   3.08
-           27,     21.600,  237.28,  122.18,   5.66,     10.800,    0.00,     inf,    inf,     43.200,  280.43,  206.76,   4.79,    21.600,  534.11,   54.28,   2.51
-           28,     28.000,  235.60,  127.61,   4.56,     14.000,    0.00,     inf,    inf,     56.000,  282.51,  212.84,   3.80,    28.000,  545.00,   55.16,   1.97
-           29,     38.667,  235.61,  132.16,   3.42,     19.333,    0.00,     inf,    inf,     77.333,  283.46,  219.70,   2.84,    38.667,  556.71,   55.93,   1.45
-           30,     60.000,  232.90,  138.31,   2.31,     30.000,    0.00,     inf,    inf,    120.000,  281.77,  228.64,   1.91,    60.000,  565.61,   56.95,   0.95
-           31,    124.000,  185.84,  179.11,   1.44,     62.000,    0.00,     inf,    inf,    248.000,  267.75,  248.64,   1.00,   124.000,  484.26,   68.74,   0.55
-           32,        inf,  132.28,  259.75,   0.00,        inf,    0.00,     inf,    nan,        inf,  226.27,  303.71,   0.00,       inf,  415.34,   82.73,   0.00
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 100
+
+Run on GPU
+Average price on GPU: 7.842862
+Processing time on GPU: 15.417000 (ms)
+
+Run on CPU
+Processing time on CPU: 8.326000 (ms)
+Average price on CPU: 8.621532
+
+GPU Speedup: 0.540053
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 200
+
+Run on GPU
+Average price on GPU: 7.956198
+Processing time on GPU: 8.846000 (ms)
+
+Run on CPU
+Processing time on CPU: 10.570000 (ms)
+Average price on CPU: 8.181554
+
+GPU Speedup: 1.194890
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 500
+
+Run on GPU
+Average price on GPU: 7.762768
+Processing time on GPU: 16.273001 (ms)
+
+Run on CPU
+Processing time on CPU: 33.678001 (ms)
+Average price on CPU: 7.880483
+
+GPU Speedup: 2.069563
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 1000
+
+Run on GPU
+Average price on GPU: 7.821172
+Processing time on GPU: 28.139999 (ms)
+
+Run on CPU
+Processing time on CPU: 57.077000 (ms)
+Average price on CPU: 7.908955
+
+GPU Speedup: 2.028323
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 2000
+
+Run on GPU
+Average price on GPU: 8.048020
+Processing time on GPU: 47.355999 (ms)
+
+Run on CPU
+Processing time on CPU: 107.002998 (ms)
+Average price on CPU: 8.034100
+
+GPU Speedup: 2.259545
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 5000
+
+Run on GPU
+Average price on GPU: 8.119459
+Processing time on GPU: 101.482002 (ms)
+
+Run on CPU
+Processing time on CPU: 282.140991 (ms)
+Average price on CPU: 8.152847
+
+GPU Speedup: 2.780207
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 10000
+
+Run on GPU
+Average price on GPU: 8.125646
+Processing time on GPU: 211.057999 (ms)
+
+Run on CPU
+Processing time on CPU: 523.903992 (ms)
+Average price on CPU: 8.138006
+
+GPU Speedup: 2.482275
+number of platforms is 1
+platform name is QUALCOMM Snapdragon(TM)
+platform version is OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch: 
+number of devices is 1
+device name is QUALCOMM Adreno(TM)
+numSamps: 20000
+
+Run on GPU
+Average price on GPU: 8.077068
+Processing time on GPU: 420.009003 (ms)
+
+Run on CPU
+Processing time on CPU: 1011.710022 (ms)
+Average price on CPU: 8.048512
+
+GPU Speedup: 2.408782
+
+
