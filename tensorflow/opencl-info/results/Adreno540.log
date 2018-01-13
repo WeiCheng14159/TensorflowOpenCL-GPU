@@ -23,6 +23,9 @@ OpenCL Device Info:
   CL_DEVICE_ADDRESS_BITS:		64
   CL_DEVICE_MAX_MEM_ALLOC_SIZE:		715 MByte
   CL_DEVICE_GLOBAL_MEM_SIZE:		2862 MByte
+  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_READ_WRITE_CACHE
+  CL_DEVICE_GLOBAL_MEM_CACHE_SIZE:      128 KByte
+  CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE:  64 Byte
   CL_DEVICE_ERROR_CORRECTION_SUPPORT:	no
   CL_DEVICE_LOCAL_MEM_TYPE:		local
   CL_DEVICE_LOCAL_MEM_SIZE:		32 KByte
@@ -39,16 +42,18 @@ OpenCL Device Info:
 					3D_MAX_HEIGHT	 16384
 					3D_MAX_DEPTH	 2048
   CL_DEVICE_PREFERRED_VECTOR_WIDTH_<t>	CHAR 1, SHORT 1, INT 1, FLOAT 1, DOUBLE 1
+  CL_DEVICE_SVM_CAPABILITIES: 	CL_DEVICE_SVM_COARSE_GRAIN_BUFFER
+
 
 
 clDeviceQuery, Platform Name = QUALCOMM Snapdragon(TM), Platform Version = OpenCL 2.0 QUALCOMM build: commit #4bec611 changeid #Icdeec648e3 Date: 08/01/17 Tue Local Branch:  Remote Branch: , NumDevs = 1, Device = QUALCOMM Adreno(TM)
 
 System Info: 
 
- Local Time/Date =  13:46:13, 11/13/2017
+ Local Time/Date =  22:49:41, 01/13/2018
  CPU Name: none
  # of CPU processors: 8
- Linux version 4.4.21-perf-g6a9ee37d-06194-ga7a871e (builder@c3-miui-ota-bd79.bj) (gcc version 4.9 20150123 (prerelease) (GCC) ) #1 SMP PREEMPT Thu Oct 19 01:27:11 CST 2017
+ Linux version 4.4.21-perf-g6a9ee37d-06248-gc4c2985 (builder@c3-miui-ota-bd76.bj) (gcc version 4.9 20150123 (prerelease) (GCC) ) #1 SMP PREEMPT Fri Dec 1 01:31:38 CST 2017
 
 
 TEST PASSED

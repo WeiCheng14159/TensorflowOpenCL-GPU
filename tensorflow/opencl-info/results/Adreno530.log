@@ -23,6 +23,9 @@ OpenCL Device Info:
   CL_DEVICE_ADDRESS_BITS:		64
   CL_DEVICE_MAX_MEM_ALLOC_SIZE:		330 MByte
   CL_DEVICE_GLOBAL_MEM_SIZE:		1322 MByte
+  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_READ_WRITE_CACHE
+  CL_DEVICE_GLOBAL_MEM_CACHE_SIZE:      128 KByte
+  CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE:  64 Byte
   CL_DEVICE_ERROR_CORRECTION_SUPPORT:	no
   CL_DEVICE_LOCAL_MEM_TYPE:		local
   CL_DEVICE_LOCAL_MEM_SIZE:		32 KByte
@@ -39,13 +42,15 @@ OpenCL Device Info:
 					3D_MAX_HEIGHT	 16384
 					3D_MAX_DEPTH	 2048
   CL_DEVICE_PREFERRED_VECTOR_WIDTH_<t>	CHAR 1, SHORT 1, INT 1, FLOAT 1, DOUBLE 1
+  CL_DEVICE_SVM_CAPABILITIES: 	CL_DEVICE_SVM_COARSE_GRAIN_BUFFER
+
 
 
 clDeviceQuery, Platform Name = QUALCOMM Snapdragon(TM), Platform Version = OpenCL 2.0 QUALCOMM build: commit #0849134 changeid #If004e8f803 Date: 02/25/16 Thu Local Branch:  Remote Branch: , NumDevs = 1, Device = QUALCOMM Adreno(TM)
 
 System Info: 
 
- Local Time/Date =  00:51:09, 11/29/2017
+ Local Time/Date =  14:48:39, 01/13/2018
  CPU Name: none
  # of CPU processors: 4
  Linux version 3.18.20-g40ad06f-00025-g820397d (git@build2) (gcc version 4.9.x-google 20140827 (prerelease) (GCC) ) #1 SMP PREEMPT Thu Jun 9 15:27:03 PDT 2016
