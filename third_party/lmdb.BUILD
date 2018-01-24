@@ -17,12 +17,12 @@ cc_library(
     ],
     copts = select({
       "//conditions:default": ["-w"],
-      ":android_aarch64": ["-w","-DANDROID"],
+      ":android_arm64": ["-w","-DANDROID"],
     }),
     linkopts = select({
         ":windows": ["-DEFAULTLIB:advapi32.lib"],  # InitializeSecurityDescriptor, SetSecurityDescriptorDacl
         ":windows_msvc": ["-DEFAULTLIB:advapi32.lib"],
-        ":android_aarch64": [],
+        ":android_arm64": [],
         "//conditions:default": ["-lpthread"],
     }),
     visibility = ["//visibility:public"],
@@ -39,6 +39,6 @@ config_setting(
 )
 
 config_setting(
-    name = "android_aarch64",
+    name = "android_arm64",
     values = {"cpu": "arm64-v8a"},
 )
