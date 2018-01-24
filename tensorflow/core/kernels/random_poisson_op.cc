@@ -324,9 +324,13 @@ class RandomPoissonOp : public OpKernel {
       Name("RandomPoisson").Device(DEVICE_CPU).TypeConstraint<TYPE>("dtype"), \
       RandomPoissonOp<TYPE, TYPE>);
 
+#if defined(__ANDROID_TYPES_SLIM__)
+TF_CALL_half(REGISTER);
+#else
 TF_CALL_half(REGISTER);
 TF_CALL_float(REGISTER);
 TF_CALL_double(REGISTER);
+#endif //__ANDROID_TYPES_SLIM__
 
 #define REGISTER_V2(RTYPE, OTYPE)                              \
   REGISTER_KERNEL_BUILDER(Name("RandomPoissonV2")              \
@@ -334,6 +338,8 @@ TF_CALL_double(REGISTER);
                               .TypeConstraint<RTYPE>("R")      \
                               .TypeConstraint<OTYPE>("dtype"), \
                           RandomPoissonOp<RTYPE, OTYPE>);
+#if defined(__ANDROID_TYPES_SLIM__)
+#else
 
 #define REGISTER_ALL(RTYPE)        \
   REGISTER_V2(RTYPE, Eigen::half); \
@@ -348,6 +354,7 @@ REGISTER_ALL(double);
 REGISTER_ALL(int32);
 REGISTER_ALL(int64);
 
+#endif //__ANDROID_TYPES_SLIM__
 #undef REGISTER_ALL
 #undef REGISTER_V2
 #undef REGISTER

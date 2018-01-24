@@ -16,6 +16,9 @@ limitations under the License.
 #include "tensorflow/core/kernels/cwise_ops_common.h"
 
 namespace tensorflow {
+#if defined(__ANDROID_TYPES_SLIM__)
+#else
 REGISTER2(BinaryOp, CPU, "Igamma", functor::igamma, float, double);
 REGISTER2(BinaryOp, CPU, "Igammac", functor::igammac, float, double);
+#endif //__ANDROID_TYPES_SLIM__
 }  // namespace tensorflow

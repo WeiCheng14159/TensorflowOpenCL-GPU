@@ -16,7 +16,10 @@ limitations under the License.
 #include "tensorflow/core/kernels/cwise_ops_common.h"
 
 namespace tensorflow {
+#if defined(__ANDROID_TYPES_SLIM__)
+#else
 REGISTER3(UnaryOp, CPU, "Erfc", functor::erfc, float, Eigen::half, double);
+#endif //__ANDROID_TYPES_SLIM__
 #if GOOGLE_CUDA
 REGISTER3(UnaryOp, GPU, "Erfc", functor::erfc, float, Eigen::half, double);
 #endif  // GOOGLE_CUDA
