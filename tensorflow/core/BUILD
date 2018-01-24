@@ -1439,6 +1439,9 @@ cc_library(
         "//tensorflow:freebsd": [],
         "//tensorflow:windows": [],
         "//tensorflow:windows_msvc": [],
+        "//tensorflow:android_arm64": [
+            "-ldl",
+        ],
         "//conditions:default": [
             "-ldl",
             "-lpthread",
