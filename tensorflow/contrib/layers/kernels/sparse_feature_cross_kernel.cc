@@ -31,6 +31,20 @@ limitations under the License.
 #include "tensorflow/core/platform/fingerprint.h"
 #include "tensorflow/core/util/work_sharder.h"
 
+// quick fix for to_string not found problem with andorid-ndk
+#include <string>
+#include <sstream>
+
+namespace std
+{
+    template < typename T > std::string to_string( const T& n )
+    {
+        std::ostringstream stm ;
+        stm << n ;
+        return stm.str() ;
+    }
+}
+
 namespace tensorflow {
 
 namespace {
