@@ -749,6 +749,23 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       actual = "@zlib_archive//:zlib",
   )
 
+  # Added by Cheng Wei, the MNIST C++ reader library
+  # (https://github.com/wichtounet/mnist)
+  native.new_http_archive(
+        name = "libmnist_reader",
+        urls = [
+             "https://github.com/wichtounet/mnist/archive/6bb5922fbdeca4ce446e0d9182ea3a0697ea079e.tar.gz",
+        ],
+        sha256 = "75de8c6e19e101de1b96902786fce0b682fa049cddf7d731cf1f38c60bdc0efc",
+        strip_prefix = "mnist-6bb5922fbdeca4ce446e0d9182ea3a0697ea079e/include",
+        build_file = str(Label("//third_party:libmnist_reader.BUILD")),
+  )
+
+  native.bind(
+      name = "libmnist",
+      actual = "@libmnist_reader//:lib",
+  )
+
 # Added by Cheng Wei, this is OpenCL driver for Xiaomi 6 running Android
 
   native.new_http_archive(
