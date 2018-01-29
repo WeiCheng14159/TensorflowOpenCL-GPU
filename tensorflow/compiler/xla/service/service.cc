@@ -34,8 +34,10 @@ limitations under the License.
 #include "tensorflow/compiler/xla/service/hlo_instruction.h"
 #include "tensorflow/compiler/xla/service/hlo_module.h"
 #include "tensorflow/compiler/xla/service/hlo_module_config.h"
+#include "tensorflow/compiler/xla/service/hlo_proto_util.h"
 #include "tensorflow/compiler/xla/service/platform_util.h"
 #include "tensorflow/compiler/xla/service/session.pb.h"
+#include "tensorflow/compiler/xla/service/source_map_util.h"
 #include "tensorflow/compiler/xla/service/transfer_manager.h"
 #include "tensorflow/compiler/xla/shape_layout.h"
 #include "tensorflow/compiler/xla/shape_util.h"
@@ -55,6 +57,7 @@ namespace se = ::perftools::gputools;
 
 using ::tensorflow::strings::Printf;
 using ::tensorflow::strings::StrCat;
+using ::xla::source_map_util::InvalidParameterArgument;
 
 namespace xla {
 
@@ -260,7 +263,8 @@ StatusOr<std::vector<const ShapedBuffer*>> Service::ResolveAndValidateArguments(
 StatusOr<std::unique_ptr<HloModuleConfig>> Service::CreateModuleConfig(
     const ProgramShape& program_shape,
     tensorflow::gtl::ArraySlice<const Shape*> argument_shapes,
-    const ExecutionOptions* execution_options) {
+    const ExecutionOptions* execution_options,
+    const UserComputation& user_computation) {
   auto config = MakeUnique<HloModuleConfig>(program_shape);
   auto* computation_layout = config->mutable_entry_computation_layout();
 
@@ -274,8 +278,10 @@ StatusOr<std::unique_ptr<HloModuleConfig>> Service::CreateModuleConfig(
     // ProgramShape.
     if (!ShapeUtil::Compatible(*argument_shapes[i],
                                program_shape.parameters(i))) {
-      return InvalidArgument(
-          "computation expects parameter %d to have shape %s, given shape %s",
+      return InvalidParameterArgument(
+          *user_computation.ParameterMetadata(i).value(),
+          "Argument does not match shape of computation parameter %d: want %s, "
+          "got %s",
           i, ShapeUtil::HumanString(program_shape.parameters(i)).c_str(),
           ShapeUtil::HumanString(*argument_shapes[i]).c_str());
     }
@@ -317,12 +323,14 @@ StatusOr<std::unique_ptr<HloModuleConfig>> Service::CreateModuleConfig(
 StatusOr<std::unique_ptr<HloModuleConfig>> Service::CreateModuleConfig(
     const ProgramShape& program_shape,
     tensorflow::gtl::ArraySlice<const ShapedBuffer*> arguments,
-    const ExecutionOptions& execution_options) {
+    const ExecutionOptions& execution_options,
+    const UserComputation& user_computation) {
   std::vector<const Shape*> argument_shapes;
   for (const auto* arg : arguments) {
     argument_shapes.push_back(&arg->on_host_shape());
   }
-  return CreateModuleConfig(program_shape, argument_shapes, &execution_options);
+  return CreateModuleConfig(program_shape, argument_shapes, &execution_options,
+                            user_computation);
 }
 
 StatusOr<std::vector<std::unique_ptr<Executable>>> Service::BuildExecutables(
@@ -418,6 +426,8 @@ StatusOr<std::unique_ptr<Executable>> Service::BuildExecutable(
       computation_tracker_.BuildHloModule(versioned_handle, *module_config,
                                           /*include_unreachable_instructions=*/
                                           true));
+
+  TF_RETURN_IF_ERROR(MaybeDumpHloModule(*module));
 
   TF_ASSIGN_OR_RETURN(
       module, backend->compiler()->RunHloPasses(std::move(module), executor));
@@ -566,7 +576,7 @@ Service::ExecuteParallelAndRegisterResult(
     se::Stream* stream = index_to_profiled_stream.second;
     Executable* executable = executables[device];
     const HloModule& module = executable->module();
-    HloExecutionProfile hlo_profile(&executable->hlo_profile_printer(),
+    HloExecutionProfile hlo_profile(&executable->hlo_profile_printer_data(),
                                     &executable->hlo_profile_index_map());
     TF_RETURN_IF_ERROR(
         executable->PopulateExecutionProfile(&hlo_profile, stream->parent()));
@@ -739,9 +749,10 @@ tensorflow::Status Service::ExecuteParallel(const ExecuteParallelRequest* arg,
 
     // Create an HloModuleConfig object for the computation, given the shape of
     // the program and the argument allocations.
-    TF_ASSIGN_OR_RETURN(std::unique_ptr<HloModuleConfig> module_config,
-                        CreateModuleConfig(*program_shape, arguments,
-                                           request.execution_options()));
+    TF_ASSIGN_OR_RETURN(
+        std::unique_ptr<HloModuleConfig> module_config,
+        CreateModuleConfig(*program_shape, arguments,
+                           request.execution_options(), *user_computation));
     VLOG(3) << "ExecuteParallel created HloModuleConfig computation layout: "
             << module_config->entry_computation_layout().ToString();
 
@@ -849,7 +860,8 @@ tensorflow::Status Service::Execute(const ExecuteRequest* arg,
 
   TF_ASSIGN_OR_RETURN(
       std::unique_ptr<HloModuleConfig> module_config,
-      CreateModuleConfig(*program_shape, arguments, arg->execution_options()));
+      CreateModuleConfig(*program_shape, arguments, arg->execution_options(),
+                         *user_computation));
 
   VLOG(3) << "Execute created HloModuleConfig computation layout: "
           << module_config->entry_computation_layout().ToString();
@@ -913,7 +925,8 @@ tensorflow::Status Service::ExecuteAsync(const ExecuteAsyncRequest* arg,
 
   TF_ASSIGN_OR_RETURN(
       std::unique_ptr<HloModuleConfig> module_config,
-      CreateModuleConfig(*program_shape, arguments, arg->execution_options()));
+      CreateModuleConfig(*program_shape, arguments, arg->execution_options(),
+                         *user_computation));
 
   VLOG(3) << "ExecuteAsync created HloModuleConfig computation layout: "
           << module_config->entry_computation_layout().ToString();
@@ -1040,8 +1053,9 @@ std::unique_ptr<ShapedBuffer> CloneShapedBufferOnDevice(
 
 tensorflow::Status Service::TransferToServer(const TransferToServerRequest* arg,
                                              TransferToServerResponse* result) {
-  Literal literal = Literal(arg->literal());
-  const Shape& shape = literal.shape();
+  TF_ASSIGN_OR_RETURN(std::unique_ptr<Literal> literal,
+                      Literal::CreateFromProto(arg->literal()));
+  const Shape& shape = literal->shape();
 
   std::vector<se::StreamExecutor*> replicas;
   if (arg->has_device_handle()) {
@@ -1065,7 +1079,7 @@ tensorflow::Status Service::TransferToServer(const TransferToServerRequest* arg,
     if (executor->device_ordinal() == master_device_ordinal) {
       TF_RETURN_IF_ERROR(
           execute_backend_->transfer_manager()->TransferLiteralToDevice(
-              executor, literal, *shaped_buffer));
+              executor, *literal, *shaped_buffer));
     } else {
       // The replica is not the master. Create an cloned shaped buffer with
       // the replica's device ordinal. This is required because
@@ -1075,7 +1089,7 @@ tensorflow::Status Service::TransferToServer(const TransferToServerRequest* arg,
           CloneShapedBufferOnDevice(*shaped_buffer, executor->device_ordinal());
       TF_RETURN_IF_ERROR(
           execute_backend_->transfer_manager()->TransferLiteralToDevice(
-              executor, literal, *clone));
+              executor, *literal, *clone));
     }
   }
   TF_ASSIGN_OR_RETURN(
@@ -1111,8 +1125,10 @@ tensorflow::Status Service::TransferToInfeed(const TransferToInfeedRequest* arg,
     executor = replicas[arg->replica_id()];
   }
 
+  TF_ASSIGN_OR_RETURN(std::unique_ptr<Literal> literal,
+                      Literal::CreateFromProto(arg->literal()));
   return execute_backend_->transfer_manager()->TransferLiteralToInfeed(
-      executor, Literal(arg->literal()));
+      executor, *literal);
 }
 
 tensorflow::Status Service::TransferFromOutfeed(
@@ -1187,7 +1203,22 @@ tensorflow::Status Service::ComputeConstant(const ComputeConstantRequest* arg,
       bool is_constant,
       user_computation->IsConstant(arg->operand(), arg->parameters_size()));
   if (!is_constant) {
-    return InvalidArgument("Operand to ComputeConstant depends on parameter.");
+    StatusOr<const OperationRequest*> op_request_status =
+        user_computation->LookUpRequestForErrorReporting(arg->operand());
+    string op_request_string = "<unknown operation>";
+    if (op_request_status.ok()) {
+      op_request_string = op_request_status.ValueOrDie()->ShortDebugString();
+    }
+    return InvalidArgument(
+        "Operand to ComputeConstant depends on a parameter.\n\n"
+        "  op requested for constant evaluation: %s\n\n"
+        "This is an internal error that typically happens when the XLA user "
+        "(e.g. TensorFlow) is attempting to determine a value that must be a "
+        "compile-time constant (e.g. an array dimension) but it is not capable "
+        "of being evaluated at XLA compile time.\n\n"
+        "Please file a usability bug with the framework being used (e.g. "
+        "TensorFlow).",
+        op_request_string.c_str());
   }
 
   // We can't use ComputeProgramShape because it checks that all parameter
@@ -1215,7 +1246,8 @@ tensorflow::Status Service::ComputeConstant(const ComputeConstantRequest* arg,
   }
 
   TF_ASSIGN_OR_RETURN(std::unique_ptr<HloModuleConfig> module_config,
-                      CreateModuleConfig(program_shape, {}, execution_options));
+                      CreateModuleConfig(program_shape, {}, execution_options,
+                                         *user_computation));
 
   // Exclude dead parameter instructions for the purpose of computing constants.
   TF_ASSIGN_OR_RETURN(
@@ -1224,18 +1256,15 @@ tensorflow::Status Service::ComputeConstant(const ComputeConstantRequest* arg,
                                           /*include_unreachable_instructions=*/
                                           false));
 
-  std::vector<Literal> parameters(arg->parameters_size());
+  std::vector<std::unique_ptr<Literal>> parameters(arg->parameters_size());
   for (int64 i = 0; i < arg->parameters_size(); ++i) {
-    parameters[i] = Literal(arg->parameters(i));
+    TF_ASSIGN_OR_RETURN(parameters[i],
+                        Literal::CreateFromProto(arg->parameters(i)));
   }
-  std::vector<const Literal*> parameter_ptrs;
-  std::transform(parameters.begin(), parameters.end(),
-                 std::back_inserter(parameter_ptrs),
-                 [](const Literal& literal) { return &literal; });
-
   HloEvaluator evaluator;
-  TF_ASSIGN_OR_RETURN(auto result_literal, evaluator.Evaluate<const Literal*>(
-                                               *module, parameter_ptrs));
+  TF_ASSIGN_OR_RETURN(
+      auto result_literal,
+      evaluator.Evaluate<std::unique_ptr<Literal>>(*module, parameters));
 
   // Since the shape_with_output_layout option in ExecutionOption is
   // non-effective to the Evaluator results, explicit relayout here.
@@ -1406,6 +1435,9 @@ tensorflow::Status Service::Op(const OpRequest* arg, OpResponse* result) {
       handle_status = computation->AddDynamicUpdateSliceInstruction(
           arg->dynamic_update_slice_request());
       break;
+    case OpRequest::kFftRequest:
+      handle_status = computation->AddFftInstruction(arg->fft_request());
+      break;
     case OpRequest::kGetTupleElementRequest:
       handle_status = computation->AddGetTupleElementInstruction(
           arg->get_tuple_element_request());
@@ -1518,8 +1550,6 @@ tensorflow::Status Service::Op(const OpRequest* arg, OpResponse* result) {
       handle_status = computation->AddRecvInstruction(arg->recv_request());
       break;
     }
-    case OpRequest::kFftRequest:
-      return Unimplemented("FftRequest not implemented in XLA service.");
     case OpRequest::OP_NOT_SET:
       return InvalidArgument("XLA service received OpRequest with OP_NOT_SET");
     default:
@@ -1579,6 +1609,17 @@ StatusOr<std::vector<perftools::gputools::StreamExecutor*>> Service::Replicas(
     replicas.push_back(executor);
   }
   return replicas;
+}
+
+Status Service::MaybeDumpHloModule(const HloModule& module) const {
+  const string xla_dump_prepass_hlo_proto_to =
+      module.config().debug_options().xla_dump_prepass_hlo_proto_to();
+  if (xla_dump_prepass_hlo_proto_to.empty()) {
+    return Status::OK();
+  }
+  HloProto proto = MakeHloProto(module);
+  return protobuf_util::DumpProtoToDirectory(
+      proto, xla_dump_prepass_hlo_proto_to, module.name());
 }
 
 }  // namespace xla

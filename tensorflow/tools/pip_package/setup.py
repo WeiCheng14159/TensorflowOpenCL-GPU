@@ -29,14 +29,17 @@ from setuptools.dist import Distribution
 # This version string is semver compatible, but incompatible with pip.
 # For pip, we will remove all '-' characters from this string, and use the
 # result for pip.
-_VERSION = '1.4.0'
+_VERSION = '1.5.0-rc1'
 
 REQUIRED_PACKAGES = [
     'absl-py >= 0.1.6',
+    'astor >= 0.6.0',
+    'gast >= 0.2.0',
     'numpy >= 1.12.1',
     'six >= 1.10.0',
     'protobuf >= 3.4.0',
-    'tensorflow-tensorboard',
+    'tensorflow-tensorboard >= 0.4.0',
+    'termcolor >= 1.1.0',
 ]
 
 project_name = 'tensorflow'
@@ -76,13 +79,13 @@ CONSOLE_SCRIPTS = [
     # is now declared by the tensorboard pip package. If we remove the
     # TensorBoard command, pip will inappropriately remove it during install,
     # even though the command is not removed, just moved to a different wheel.
-    'tensorboard = tensorboard.main:run_main',
+    'tensorboard = tensorboard.main:main',
 ]
 # pylint: enable=line-too-long
 
 # remove the tensorboard console script if building tf_nightly
 if 'tf_nightly' in project_name:
-  CONSOLE_SCRIPTS.remove('tensorboard = tensorboard.main:run_main')
+  CONSOLE_SCRIPTS.remove('tensorboard = tensorboard.main:main')
 
 TEST_PACKAGES = [
     'scipy >= 0.15.1',
@@ -176,10 +179,15 @@ def find_files(pattern, root):
 
 
 matches = ['../' + x for x in find_files('*', 'external') if '.py' not in x]
-matches += ['../' + x for x in find_files('*', '_solib_k8') if '.py' not in x]
-matches += [
-    '../' + x for x in find_files('*', '_solib_local') if '.py' not in x
-]
+
+so_lib_paths = [i for i in os.listdir('.')
+                if os.path.isdir(i) 
+                and fnmatch.fnmatch(i, '_solib_*')]
+
+for path in so_lib_paths:
+  matches.extend(
+      ['../' + x for x in find_files('*', path) if '.py' not in x]
+  )
 
 if os.name == 'nt':
   EXTENSION_NAME = 'python/_pywrap_tensorflow_internal.pyd'
