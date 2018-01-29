@@ -167,12 +167,12 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
   tf_http_archive(
       name = "com_googlesource_code_re2",
       urls = [
-          # "http://mirror.bazel.build/github.com/google/re2/archive/b94b7cd42e9f02673cd748c1ac1d16db4052514c.tar.gz",
-          # "https://github.com/google/re2/archive/b94b7cd42e9f02673cd748c1ac1d16db4052514c.tar.gz",
-            "https://github.com/supernovaremnant/re2/archive/7346bf57212dda8fc7438a63b4d4d9dc9ebb51d5.tar.gz",
+          "https://mirror.bazel.build/github.com/google/re2/archive/26cd968b735e227361c9703683266f01e5df7857.tar.gz",
+          "https://github.com/google/re2/archive/26cd968b735e227361c9703683266f01e5df7857.tar.gz",
+          # "https://github.com/supernovaremnant/re2/archive/7346bf57212dda8fc7438a63b4d4d9dc9ebb51d5.tar.gz",
       ],
-      sha256 = "957971fac6d7f9bbccd430df7dea10357fedd871954d9fea6dd7c2596ba0d1bd",
-      strip_prefix = "re2-7346bf57212dda8fc7438a63b4d4d9dc9ebb51d5",
+      sha256 = "e57eeb837ac40b5be37b2c6197438766e73343ffb32368efea793dfd8b28653b",
+      strip_prefix = "re2-26cd968b735e227361c9703683266f01e5df7857",
   )
 
   tf_http_archive(
@@ -488,12 +488,11 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
   tf_http_archive(
       name = "lmdb",
       urls = [
-          # "http://mirror.bazel.build/github.com/LMDB/lmdb/archive/LMDB_0.9.19.tar.gz",
-          # "https://github.com/LMDB/lmdb/archive/LMDB_0.9.19.tar.gz",
-            "https://github.com/supernovaremnant/lmdb/archive/3daab3be733b933a3fd2263441da4976206b27a2.tar.gz",
+          "https://mirror.bazel.build/github.com/LMDB/lmdb/archive/LMDB_0.9.19.tar.gz",
+          "https://github.com/LMDB/lmdb/archive/LMDB_0.9.19.tar.gz",
       ],
-      sha256 = "6515f649fc5e0488b930ef86efb7c1e0654bb166a792fd3b73905ce31d93da14",
-      strip_prefix = "lmdb-3daab3be733b933a3fd2263441da4976206b27a2/libraries/liblmdb",
+      sha256 = "108532fb94c6f227558d45be3f3347b52539f0f58290a7bb31ec06c462d05326",
+      strip_prefix = "lmdb-LMDB_0.9.19/libraries/liblmdb",
       build_file = str(Label("//third_party:lmdb.BUILD")),
   )
 
@@ -817,6 +816,23 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       actual = "@zlib_archive//:zlib",
   )
 
+  # Added by Cheng Wei, the MNIST C++ reader library
+  # (https://github.com/wichtounet/mnist)
+  native.new_http_archive(
+        name = "libmnist_reader",
+        urls = [
+             "https://github.com/wichtounet/mnist/archive/6bb5922fbdeca4ce446e0d9182ea3a0697ea079e.tar.gz",
+        ],
+        sha256 = "75de8c6e19e101de1b96902786fce0b682fa049cddf7d731cf1f38c60bdc0efc",
+        strip_prefix = "mnist-6bb5922fbdeca4ce446e0d9182ea3a0697ea079e/include",
+        build_file = str(Label("//third_party:libmnist_reader.BUILD")),
+  )
+
+  native.bind(
+      name = "libmnist",
+      actual = "@libmnist_reader//:lib",
+  )
+
 # Added by Cheng Wei, this is OpenCL driver for Xiaomi 6 running Android
 
   native.new_http_archive(
@@ -844,8 +860,8 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       actual = "@libopencl_archive//:clheader",
   )
 
-# Added by Cheng Wei, this is the OpenCL implementation of SYCL 1.2 
-# running on Adreno 540 GPU 
+# Added by Cheng Wei, this is the OpenCL implementation of SYCL 1.2
+# running on Adreno 540 GPU
 
   native.new_http_archive(
       name = "libsycl_gtx_archive",
@@ -861,4 +877,3 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       name = "libsycl",
       actual = "@libsycl_gtx_archive//:sycl-lib",
   )
-

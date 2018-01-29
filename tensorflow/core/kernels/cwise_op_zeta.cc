@@ -17,5 +17,8 @@ limitations under the License.
 
 namespace tensorflow {
 REGISTER2(BinaryOp, CPU, "Zeta", functor::zeta, float, double);
+#if defined(__ANDROID_TYPES_SLIM__)
+#else
 REGISTER2(BinaryOp, CPU, "Polygamma", functor::polygamma, float, double);
+#endif //__ANDROID_TYPES_SLIM__
 }  // namespace tensorflow

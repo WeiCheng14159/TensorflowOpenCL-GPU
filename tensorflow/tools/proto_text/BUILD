@@ -58,6 +58,10 @@ cc_library(
             "-lm",
             "-lpthread",
         ],
+        "//tensorflow:android_arm64": [
+            "-lm",
+            "-lrt",
+        ],
         "//conditions:default": [
             "-lm",
             "-lpthread",

@@ -15,12 +15,14 @@ cc_library(
         "lmdb.h",
         "midl.h",
     ],
-    copts = [
-        "-w",
-    ],
+    copts = select({
+      "//conditions:default": ["-w"],
+      ":android_arm64": ["-w","-DANDROID"],
+    }),
     linkopts = select({
         ":windows": ["-DEFAULTLIB:advapi32.lib"],  # InitializeSecurityDescriptor, SetSecurityDescriptorDacl
         ":windows_msvc": ["-DEFAULTLIB:advapi32.lib"],
+        ":android_arm64": [],
         "//conditions:default": ["-lpthread"],
     }),
     visibility = ["//visibility:public"],
@@ -34,4 +36,9 @@ config_setting(
 config_setting(
     name = "windows_msvc",
     values = {"cpu": "x64_windows_msvc"},
+)
+
+config_setting(
+    name = "android_arm64",
+    values = {"cpu": "arm64-v8a"},
 )

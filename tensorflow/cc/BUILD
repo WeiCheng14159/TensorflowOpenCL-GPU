@@ -603,6 +603,10 @@ tf_cc_binary(
             "-lm",
             "-lpthread",
         ],
+        "//tensorflow:android_arm64": [
+            "-lm",
+            "-lrt",
+        ],
         "//conditions:default": [
             "-lm",
             "-lpthread",
