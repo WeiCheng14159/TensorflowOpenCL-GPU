@@ -4726,6 +4726,7 @@ filegroup(
         "warn_about_ints.h",
         "where_op.h",
         "xent_op.h",
+        "sparse_xent_op.h", # Support for SparseSoftmaxCrossEntropyWithLogits Ops
     ],
 )
 
@@ -4903,6 +4904,7 @@ filegroup(
         "warn_about_ints.cc",
         "where_op.cc",
         "xent_op.cc",
+        "sparse_xent_op.cc", # Support for SparseSoftmaxCrossEntropyWithLogits Ops
         ":android_extended_ops_headers",
     ],
 )
