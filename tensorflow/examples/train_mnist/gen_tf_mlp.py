@@ -73,7 +73,7 @@ def main(_):
 
   tf.train.write_graph(sess.graph_def,
   						'./',
-  						'mnist_100_mlp_txt.pb', as_text=True)
+  						'mnist_100_mlp.pb', as_text=False)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
