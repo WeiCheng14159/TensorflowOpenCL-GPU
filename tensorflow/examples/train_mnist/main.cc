@@ -127,39 +127,39 @@ int main(int argc, char* argv[]) {
   }
   std::cout << "[TF Model File Loaded From Directory] = " << graph_path << std::endl;
 
-  // Load MNIST training data into TF Tensors
-    // batch_tensor with dimenstion { batch_size, input_width * input_height }
+  // Load MNIST training data & labels into TF Tensors
+    // batch_img_tensor with dimenstion { batch_size, input_width * input_height }
     // = { batch_size, 28*28 }
-    tensorflow::Tensor batch_tensor(tensorflow::DT_FLOAT,
+    tensorflow::Tensor batch_img_tensor(tensorflow::DT_FLOAT,
       tensorflow::TensorShape({batch_size, input_width * input_height}));
 
     for( auto batch_idx = 0 ; batch_idx < dataset.training_images.size() / batch_size;
       batch_idx ++ ){ // Batch loop
 
-      // batch vector with dimension { 1, batch_size x input_width x input_height }
-      std::vector<float> batch_vec;
+      // image vector with dimension { 1, batch_size x input_width x input_height }
+      std::vector<float> batch_img_vec;
 
       for ( auto batch_itr = 0 ; batch_itr < batch_size ; batch_itr ++ ){ // Within a Batch
 
-        // vec with dim { 1, input_width * input_height }
-        std::vector<uint8_t> vec = dataset.training_images[ batch_idx * batch_size + batch_itr ];
-        for( auto pixel = 0 ; pixel < vec.size() ; pixel ++ ){
+        // vec_img with dim { 1, input_width * input_height }
+        std::vector<uint8_t> vec_img = dataset.training_images[ batch_idx * batch_size + batch_itr ];
+        for( auto pixel = 0 ; pixel < vec_img.size() ; pixel ++ ){
           // Cast image data from uint_8 -> float
-          batch_vec.push_back( (float)( vec[pixel] ) );
+          batch_img_vec.push_back( (float)( vec_img[pixel] ) );
         }
       } // Within a Batch
 
       // Copy a single batch of data to TF Tensor
-      std::copy_n( batch_vec.begin(), batch_vec.size(), batch_tensor.flat<float>().data() );
+      std::copy_n( batch_img_vec.begin(), batch_img_vec.size(), batch_img_tensor.flat<float>().data() );
 
       // Check if Tensor is initialized
-      if( !batch_tensor.IsInitialized() ){
+      if( !batch_img_tensor.IsInitialized() ){
         LOG(ERROR) << "Tensor not initialized" ;
         return -1;
       }
 
       // Input Tensor info
-      std::cout << "Batch " << batch_idx << " loaded " << batch_tensor.DebugString()
+      std::cout << "Batch " << batch_idx << " loaded " << batch_img_tensor.DebugString()
         << std::endl;
 
   } // End of Batch loop
