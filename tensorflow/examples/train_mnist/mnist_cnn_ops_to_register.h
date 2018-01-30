@@ -136,5 +136,5 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
 }
 #define SHOULD_REGISTER_OP(op) ShouldRegisterOp(op)
 
-#define SHOULD_REGISTER_OP_GRADIENT false
+#define SHOULD_REGISTER_OP_GRADIENT true
 #endif
