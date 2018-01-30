@@ -131,13 +131,20 @@ int main(int argc, char* argv[]) {
     // batch_img_tensor with dimenstion { batch_size, input_width * input_height }
     // = { batch_size, 28*28 }
     tensorflow::Tensor batch_img_tensor(tensorflow::DT_FLOAT,
-      tensorflow::TensorShape({batch_size, input_width * input_height}));
+      tensorflow::TensorShape( { batch_size, input_width * input_height } ) );
+
+    // batch_label_tensor with dimenstion { batch_size, 1 }
+    // = { batch_size, 1 }
+    tensorflow::Tensor batch_label_tensor(tensorflow::DT_UINT8,
+      tensorflow::TensorShape( { batch_size, 1 } ) );
 
     for( auto batch_idx = 0 ; batch_idx < dataset.training_images.size() / batch_size;
       batch_idx ++ ){ // Batch loop
 
       // image vector with dimension { 1, batch_size x input_width x input_height }
       std::vector<float> batch_img_vec;
+      // label vector with dimension { 1, batch_size }
+      std::vector<uint8_t> batch_label_vec;
 
       for ( auto batch_itr = 0 ; batch_itr < batch_size ; batch_itr ++ ){ // Within a Batch
 
@@ -147,20 +154,28 @@ int main(int argc, char* argv[]) {
           // Cast image data from uint_8 -> float
           batch_img_vec.push_back( (float)( vec_img[pixel] ) );
         }
+
+        // vec_label with dim { 1, 1 }
+        uint8_t vec_label = dataset.training_labels[ batch_idx * batch_size + batch_itr ];
+        batch_label_vec.push_back( vec_label );
+
       } // Within a Batch
 
-      // Copy a single batch of data to TF Tensor
+      // Copy a single batch of image data to TF Tensor
       std::copy_n( batch_img_vec.begin(), batch_img_vec.size(), batch_img_tensor.flat<float>().data() );
+      // Copy a single batch of label data to TF Tensor
+      std::copy_n( batch_label_vec.begin(), batch_label_vec.size(), batch_label_tensor.flat<uint8_t>().data() );
 
       // Check if Tensor is initialized
-      if( !batch_img_tensor.IsInitialized() ){
+      if( !batch_img_tensor.IsInitialized() || !batch_label_tensor.IsInitialized() ){
         LOG(ERROR) << "Tensor not initialized" ;
         return -1;
       }
 
-      // Input Tensor info
-      std::cout << "Batch " << batch_idx << " loaded " << batch_img_tensor.DebugString()
-        << std::endl;
+      // Tensor info
+      std::cout << "Batch " << batch_idx << " loaded to Tensor" << std::endl <<
+      " [Image]"<< batch_img_tensor.DebugString()      << std::endl <<
+      " [Label]"<< batch_label_tensor.DebugString()    << std::endl;
 
   } // End of Batch loop
 
