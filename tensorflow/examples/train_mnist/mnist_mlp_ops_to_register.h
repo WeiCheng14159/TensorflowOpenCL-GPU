@@ -43,6 +43,7 @@
 "IdentityOp",
 "MatMulOp<CPUDevice, float, false >",
 "ReductionOp<CPUDevice, float, int32, Eigen::internal::MeanReducer<float>>",
+"SummaryMergeOp",
 "BinaryOp< CPUDevice, functor::mul<float>>",
 "UnaryOp< CPUDevice, functor::neg<float>>",
 "NoOp",
@@ -50,11 +51,13 @@
 "IdentityOp",
 "BinaryOp< CPUDevice, functor::div<float>>",
 "ReshapeOp",
+"SummaryScalarOp<float>",
 "SelectOp<CPUDevice, float>",
 "ShapeOp<int32>",
 "SparseSoftmaxXentWithLogitsOp<CPUDevice, float, int64>",
 "ReductionOp<CPUDevice, float, int32, Eigen::internal::SumReducer<float>>",
 "TileOp<CPUDevice, int32>",
+"PhiloxRandomOp< CPUDevice, random::TruncatedNormalDistribution< random::SingleSampleAdapter<random::PhiloxRandom>, float>>",
 "VariableOp",
 "ZerosLikeOp< CPUDevice, float>",
 "RecvOp",
@@ -78,6 +81,7 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "Identity")
      || isequal(op, "MatMul")
      || isequal(op, "Mean")
+     || isequal(op, "MergeSummary")
      || isequal(op, "Mul")
      || isequal(op, "Neg")
      || isequal(op, "NoOp")
@@ -85,11 +89,13 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "PreventGradient")
      || isequal(op, "RealDiv")
      || isequal(op, "Reshape")
+     || isequal(op, "ScalarSummary")
      || isequal(op, "Select")
      || isequal(op, "Shape")
      || isequal(op, "SparseSoftmaxCrossEntropyWithLogits")
      || isequal(op, "Sum")
      || isequal(op, "Tile")
+     || isequal(op, "TruncatedNormal")
      || isequal(op, "VariableV2")
      || isequal(op, "ZerosLike")
      || isequal(op, "_Recv")
