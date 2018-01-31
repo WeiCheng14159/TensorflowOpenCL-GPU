@@ -42,8 +42,8 @@ def main(_):
   x = tf.placeholder(tf.float32, [None, img_size * img_size ], name="input")
   y = tf.placeholder(tf.int64, [None], name="output")
 
-  W = tf.Variable(tf.truncated_normal([ img_size * img_size, 10], stddev=0.1))
-  b = tf.Variable(tf.zeros([10]))
+  W = tf.Variable(tf.truncated_normal([ img_size * img_size, 10], stddev=0.1), name="W")
+  b = tf.Variable(tf.zeros([10]), name="b")
 
   y_out = tf.matmul(x, W) + b
 
@@ -54,7 +54,7 @@ def main(_):
   correct_prediction = tf.equal(tf.argmax(y_out, 1), y)
   accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name="test")
 
-  # Create a summary to monitor loss tensor
+  # Create a summary to monitor cross_entropy tensor
   tf.summary.scalar("cross_entropy", cross_entropy)
   # Create a summary to monitor accuracy tensor
   tf.summary.scalar("accuracy", accuracy)
@@ -66,8 +66,8 @@ def main(_):
   sess = tf.Session()
   sess.run(init_op)
 
-  summary_writer = tf.summary.FileWriter(logs_path,
-									   graph=sess.graph)
+  summary_writer = tf.summary.FileWriter(logs_path, graph=sess.graph)
+
   num_steps = 10000
   setp_to_test = 10
   batch_size = 100
@@ -77,8 +77,10 @@ def main(_):
     batch_xs, batch_ys = mnist.train.next_batch(batch_size)
 
     if step % setp_to_test == 0:
+
         error, acc, summary = sess.run([ cross_entropy, accuracy, merged_summary_op ], \
             feed_dict={ x: mnist.test.images, y: mnist.test.labels })
+
         print('step %d, training accuracy %f' % (step, acc))
         summary_writer.add_summary(summary, step)
     else:
@@ -90,8 +92,8 @@ def main(_):
     y: mnist.test.labels}) )
 
   tf.train.write_graph(sess.graph_def,
-  						'./',
-  						'mnist_100_mlp.pb', as_text=False)
+                        './',
+                        'mnist_100_mlp.pb', as_text=False)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
