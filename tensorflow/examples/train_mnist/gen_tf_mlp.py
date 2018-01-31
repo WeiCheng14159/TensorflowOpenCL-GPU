@@ -78,12 +78,12 @@ def main(_):
 
     if step % setp_to_test == 0:
         error, acc, summary = sess.run([ cross_entropy, accuracy, merged_summary_op ], \
-                                        feed_dict={ x: batch_xs, y: batch_ys })
+            feed_dict={ x: mnist.test.images, y: mnist.test.labels })
         print('step %d, training accuracy %f' % (step, acc))
         summary_writer.add_summary(summary, step)
     else:
         ts, summary = sess.run([ train_step, merged_summary_op ], \
-                                feed_dict={ x: batch_xs, y: batch_ys })
+            feed_dict={ x: batch_xs, y: batch_ys })
 
   # Test trained model
   print('test accuracy %f' % sess.run(accuracy, feed_dict={x: mnist.test.images,
