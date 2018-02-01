@@ -183,12 +183,6 @@ int main(int argc, char* argv[]) {
       std::copy_n( batch_label_vec.begin(), batch_label_vec.size(),
         batch_label_tensor.flat<long long>().data() );
 
-      // Check if Tensor is initialized
-      if( !batch_img_tensor.IsInitialized() || !batch_label_tensor.IsInitialized() ) {
-        LOG(ERROR) << "Tensor not initialized" ;
-        return -1;
-      }
-
       // Tensor info
       LOG(INFO) << "Batch " << batch_idx << " of data loaded into Tensor\n" <<
       " [Image] " << batch_img_tensor.DebugString() << "\n"
