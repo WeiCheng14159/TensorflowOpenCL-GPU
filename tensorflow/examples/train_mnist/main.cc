@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   string train_Ops        = "train";
   int32  input_width      = 28;
   int32  input_height     = 28;
-  int32  batch_size       = 10;
+  int32  batch_size       = 50;
   int32  max_steps        = 100000;
 
   std::vector<Flag> flag_list = {
