@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
     std::cout << "[MNIST Dataset] Input Image Size       = " <<
       input_width << "x" << input_height << std::endl;
 
-  // Load and initialize TF model.
+  // Load TF model.
   std::unique_ptr<tensorflow::Session> session;
   string graph_path = tensorflow::io::JoinPath(root_dir, graph_name);
   Status load_graph_status = LoadGraph(graph_path, &session);
@@ -132,6 +132,7 @@ int main(int argc, char* argv[]) {
   std::cout << "[TF Model File Loaded From Directory] = " << graph_path << std::endl;
 
   // Load MNIST training data & labels into TF Tensors
+
     // batch_img_tensor with dimenstion { batch_size, input_width * input_height }
     // = { batch_size, 28*28 }
     tensorflow::Tensor batch_img_tensor(tensorflow::DT_FLOAT,
@@ -150,7 +151,8 @@ int main(int argc, char* argv[]) {
       // label vector with dimension { 1, batch_size }
       std::vector<uint8_t> batch_label_vec;
 
-      for ( auto batch_itr = 0 ; batch_itr < batch_size ; batch_itr ++ ){ // Within a Batch
+      for ( auto batch_itr = 0 ; batch_itr < batch_size ; batch_itr ++ )
+      { // Within a single input image
 
         // vec_img with dim { 1, input_width * input_height }
         std::vector<uint8_t> vec_img = dataset.training_images[ batch_idx * batch_size + batch_itr ];
@@ -163,21 +165,23 @@ int main(int argc, char* argv[]) {
         uint8_t vec_label = dataset.training_labels[ batch_idx * batch_size + batch_itr ];
         batch_label_vec.push_back( vec_label );
 
-      } // Within a Batch
+      } // Within a single input image
 
-      // Copy a single batch of image data to TF Tensor
-      std::copy_n( batch_img_vec.begin(), batch_img_vec.size(), batch_img_tensor.flat<float>().data() );
-      // Copy a single batch of label data to TF Tensor
-      std::copy_n( batch_label_vec.begin(), batch_label_vec.size(), batch_label_tensor.flat<uint8_t>().data() );
+      // Copy a batch of image data to TF Tensor
+      std::copy_n( batch_img_vec.begin(), batch_img_vec.size(),
+        batch_img_tensor.flat<float>().data() );
+      // Copy a batch of label data to TF Tensor
+      std::copy_n( batch_label_vec.begin(), batch_label_vec.size(),
+        batch_label_tensor.flat<long long>().data() );
 
       // Check if Tensor is initialized
-      if( !batch_img_tensor.IsInitialized() || !batch_label_tensor.IsInitialized() ){
+      if( !batch_img_tensor.IsInitialized() || !batch_label_tensor.IsInitialized() ) {
         LOG(ERROR) << "Tensor not initialized" ;
         return -1;
       }
 
       // Tensor info
-      std::cout << "Batch " << batch_idx << " loaded to Tensor" << std::endl <<
+      std::cout << "Batch " << batch_idx << " of data loaded into Tensor\n" <<
       " [Image]"<< batch_img_tensor.DebugString()      << std::endl <<
       " [Label]"<< batch_label_tensor.DebugString()    << std::endl;
 
