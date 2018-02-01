@@ -144,10 +144,9 @@ int main(int argc, char* argv[]) {
     tensorflow::Tensor batch_img_tensor(tensorflow::DT_FLOAT,
       tensorflow::TensorShape( { batch_size, input_width * input_height } ) );
 
-    // batch_label_tensor with dimenstion { batch_size, 1 }
-    // = { batch_size, 1 }
-    tensorflow::Tensor batch_label_tensor(tensorflow::DT_UINT8,
-      tensorflow::TensorShape( { batch_size, 1 } ) );
+    // batch_label_tensor with dimenstion { batch_size, 1 } = { batch_size, 1 }
+    tensorflow::Tensor batch_label_tensor(tensorflow::DT_INT64,
+      tensorflow::TensorShape( { batch_size } ) );
 
     for( auto batch_idx = 0 ; batch_idx < dataset.training_images.size() / batch_size;
       batch_idx ++ ){ // Batch loop
@@ -158,7 +157,7 @@ int main(int argc, char* argv[]) {
       // image vector with dimension { 1, batch_size x input_width x input_height }
       std::vector<float> batch_img_vec;
       // label vector with dimension { 1, batch_size }
-      std::vector<uint8_t> batch_label_vec;
+      std::vector<long int> batch_label_vec;
 
       for ( auto batch_itr = 0 ; batch_itr < batch_size ; batch_itr ++ )
       { // Within a single input image
@@ -172,7 +171,7 @@ int main(int argc, char* argv[]) {
 
         // vec_label with dim { 1, 1 }
         uint8_t vec_label = dataset.training_labels[ batch_idx * batch_size + batch_itr ];
-        batch_label_vec.push_back( vec_label );
+        batch_label_vec.push_back( (long int)(vec_label) );
 
       } // Within a single input image
 
