@@ -191,6 +191,55 @@ int main(int argc, char* argv[]) {
         { T_label, batch_label_tensor } }, {}, { train_Ops }, nullptr) );
       LOG(INFO) << "Batch " << batch_idx << " trained\n" ;
 
-  } // End of Training Batch Loop 
+  } // End of Training Batch Loop
+
+  // Load MNIST testing data & labels into TF Tensors
+
+    // test_img_tensor with dimenstion { 10000, input_width * input_height } = { 10000, 28*28 }
+    Tensor test_img_tensor(DT_FLOAT, TensorShape( { 10000, input_width * input_height } ) );
+
+    // test_label_tensor with dimenstion { 10000, 1 } = { 10000, 1 }
+    Tensor test_label_tensor(DT_INT64, TensorShape( { 10000 } ) );
+
+    // image vector with dimension { 1, 10000 x input_width x input_height }
+    std::vector<float> test_img_vec;
+    // label vector with dimension { 1, 10000 }
+    std::vector<long int> test_label_vec;
+
+    for ( auto batch_itr = 0 ; batch_itr < 10000 ; batch_itr ++ )
+    { // Within a single input image
+
+      // vec_img with dim { 1, input_width * input_height }
+      std::vector<uint8_t> vec_img = dataset.test_images[ batch_itr ];
+      for( auto pixel = 0 ; pixel < vec_img.size() ; pixel ++ ){
+        // Cast image data from uint_8 -> float
+        test_img_vec.push_back( (float)( vec_img[pixel] ) );
+      }
+
+      // vec_label with dim { 1, 1 }
+      uint8_t vec_label = dataset.test_labels[ batch_itr ];
+      test_label_vec.push_back( (long int)(vec_label) );
+
+    } // Within a single input image
+
+    // Copy testing image data to TF Tensor
+    std::copy_n( test_img_vec.begin(), test_img_vec.size(),
+      test_img_tensor.flat<float>().data() );
+    // Copy testing label data to TF Tensor
+    std::copy_n( test_label_vec.begin(), test_label_vec.size(),
+      test_label_tensor.flat<long long>().data() );
+
+    // Tensor info
+    LOG(INFO) << "Testing data loaded into Tensor\n" <<
+    " [Image] " << test_img_tensor.DebugString() << "\n"
+    " [Label] " << test_label_tensor.DebugString() << "\n";
+
+  // Output Tensor ( a vector list of Tensors )
+  std::vector<Tensor> outputs;
+  // Test the accuracy of TF model
+  TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
+    { T_label, test_label_tensor } }, { test_Ops }, {}, &outputs ) );
+  // Print Accuracy
+  LOG(INFO) << "Accuracy " << outputs[0].scalar<float>()(0) * 100 << "\%";
 
 } // End of main
