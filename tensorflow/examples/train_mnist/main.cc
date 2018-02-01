@@ -42,15 +42,15 @@ using namespace tensorflow;
 // Reads a model graph definition from disk, and creates a session object you
 // can use to run it.
 Status LoadGraph(const string& graph_file_name,
-                 std::unique_ptr<tensorflow::Session>* session) {
-  tensorflow::GraphDef graph_def;
+                 std::unique_ptr<Session>* session) {
+  GraphDef graph_def;
   Status load_graph_status =
-      ReadBinaryProto(tensorflow::Env::Default(), graph_file_name, &graph_def);
+      ReadBinaryProto(Env::Default(), graph_file_name, &graph_def);
   if (!load_graph_status.ok()) {
-    return tensorflow::errors::NotFound("Failed to load compute graph at '",
+    return errors::NotFound("Failed to load compute graph at '",
                                         graph_file_name, "'");
   }
-  session->reset(tensorflow::NewSession(tensorflow::SessionOptions()));
+  session->reset(NewSession(SessionOptions()));
   Status session_create_status = (*session)->Create(graph_def);
   if (!session_create_status.ok()) {
     return session_create_status;
@@ -85,15 +85,15 @@ int main(int argc, char* argv[]) {
       Flag("max_steps",     &max_steps,     "maximum number of taining steps"),
   };
 
-  string usage = tensorflow::Flags::Usage(argv[0], flag_list);
-  const bool parse_result = tensorflow::Flags::Parse(&argc, argv, flag_list);
+  string usage = Flags::Usage(argv[0], flag_list);
+  const bool parse_result = Flags::Parse(&argc, argv, flag_list);
   if (!parse_result) {
     LOG(ERROR) << usage;
     return -1;
   }
 
   // We need to call this to set up global state for TensorFlow.
-  tensorflow::port::InitMain(argv[0], &argc, &argv);
+  port::InitMain(argv[0], &argc, &argv);
   if (argc > 1) {
     LOG(ERROR) << "Unknown argument " << argv[1] << "\n" << usage;
     return -1;
@@ -124,8 +124,8 @@ int main(int argc, char* argv[]) {
       input_width << "x" << input_height ;
 
   // Load TF model.
-  std::unique_ptr<tensorflow::Session> session;
-  string graph_path = tensorflow::io::JoinPath(root_dir, graph_name);
+  std::unique_ptr<Session> session;
+  string graph_path = io::JoinPath(root_dir, graph_name);
   Status load_graph_status = LoadGraph(graph_path, &session);
   if (!load_graph_status.ok()) {
     LOG(ERROR) << load_graph_status;
@@ -141,12 +141,10 @@ int main(int argc, char* argv[]) {
 
     // batch_img_tensor with dimenstion { batch_size, input_width * input_height }
     // = { batch_size, 28*28 }
-    tensorflow::Tensor batch_img_tensor(tensorflow::DT_FLOAT,
-      tensorflow::TensorShape( { batch_size, input_width * input_height } ) );
+    Tensor batch_img_tensor( DT_FLOAT, TensorShape( { batch_size, input_width * input_height } ) );
 
     // batch_label_tensor with dimenstion { batch_size, 1 } = { batch_size, 1 }
-    tensorflow::Tensor batch_label_tensor(tensorflow::DT_INT64,
-      tensorflow::TensorShape( { batch_size } ) );
+    Tensor batch_label_tensor( DT_INT64, TensorShape( { batch_size } ) );
 
     for( auto batch_idx = 0 ; batch_idx < dataset.training_images.size() / batch_size;
       batch_idx ++ ){ // Batch loop
