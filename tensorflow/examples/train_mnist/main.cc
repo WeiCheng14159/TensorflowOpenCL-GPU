@@ -63,8 +63,10 @@ int main(int argc, char* argv[]) {
   string root_dir         = "/data/local/tmp/";
   string graph_name       = "mnist_100_mlp.pb";
   string mnist_dir        = root_dir + "MNIST_data/";
-  string input_layer      = "input";
-  string output_layer     = "output";
+  string T_input          = "input";
+  string T_label          = "output";
+  string test_Ops         = "test";
+  string train_Ops        = "train";
   int32  input_width      = 28;
   int32  input_height     = 28;
   int32  batch_size       = 10;
@@ -74,8 +76,8 @@ int main(int argc, char* argv[]) {
         "interpret graph file names relative to this directory"),
       Flag("graph_name",    &graph_name,    "graph to be executed"),
       Flag("mnist_dir",     &mnist_dir,     "MNIST dataset directory"),
-      Flag("input_layer",   &input_layer,   "name of input layer"),
-      Flag("output_layer",  &output_layer,  "name of output layer"),
+      Flag("T_input",       &T_input,       "name of input Tensor"),
+      Flag("T_label",       &T_label,      "name of output Tensor"),
       Flag("batch_size",    &batch_size,    "training batch size"),
   };
 
