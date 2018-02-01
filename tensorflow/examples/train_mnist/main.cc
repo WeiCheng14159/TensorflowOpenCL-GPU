@@ -147,7 +147,8 @@ int main(int argc, char* argv[]) {
     Tensor batch_label_tensor( DT_INT64, TensorShape( { batch_size } ) );
 
     for( auto batch_idx = 0 ; batch_idx < dataset.training_images.size() / batch_size;
-      batch_idx ++ ){ // Batch loop
+      batch_idx ++ )
+    { // Training Batch Loop
 
       // If the number of training steps > max_steps then stop training
       if ( ( batch_idx + 1 ) * batch_size > max_steps ){ break; }
@@ -185,6 +186,11 @@ int main(int argc, char* argv[]) {
       " [Image] " << batch_img_tensor.DebugString() << "\n"
       " [Label] " << batch_label_tensor.DebugString() << "\n";
 
-  } // End of Batch loop
+      // Traing the model for each batch
+      TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
+        { T_label, batch_label_tensor } }, {}, { train_Ops }, nullptr) );
+      LOG(INFO) << "Batch " << batch_idx << " trained\n" ;
+
+  } // End of Training Batch Loop 
 
 } // End of main
