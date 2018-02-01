@@ -78,6 +78,8 @@ int main(int argc, char* argv[]) {
       Flag("mnist_dir",     &mnist_dir,     "MNIST dataset directory"),
       Flag("T_input",       &T_input,       "name of input Tensor"),
       Flag("T_label",       &T_label,      "name of output Tensor"),
+      Flag("test_Ops",      &test_Ops,      "name of cost Ops"),
+      Flag("train_Ops",     &train_Ops,     "name of training Ops"),
       Flag("batch_size",    &batch_size,    "training batch size"),
   };
 
