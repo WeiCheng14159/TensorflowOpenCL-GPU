@@ -40,7 +40,7 @@ def main(_):
 
   # Create the model
   x = tf.placeholder(tf.float32, [None, img_size * img_size ], name="input")
-  y = tf.placeholder(tf.int64, [None], name="output")
+  y = tf.placeholder(tf.int32,   [None                      ], name="output")
 
   W = tf.Variable(tf.truncated_normal([ img_size * img_size, 10], stddev=0.1), name="W")
   b = tf.Variable(tf.zeros([10]), name="b")
