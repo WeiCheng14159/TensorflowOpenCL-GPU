@@ -29,7 +29,7 @@
     }  // end namespace
     constexpr const char* kNecessaryOpKernelClasses[] = {
 "BinaryOp< CPUDevice, functor::add<float>>",
-"ApplyGradientDescentOp<CPUDevice, float>",
+"ApplyAdamOp<CPUDevice, float>",
 "ArgMaxOp<CPUDevice, float, int64>",
 "AssignOpT<CPUDevice, float>",
 "BCastGradArgsOp<int32>",
@@ -40,6 +40,7 @@
 "ExpandDimsOp<int32>",
 "FillOp<CPUDevice, float, int32>",
 "BinaryOp< CPUDevice, functor::greater<float>>",
+"SummaryHistoOp<float>",
 "IdentityOp",
 "MatMulOp<CPUDevice, float, false >",
 "ReductionOp<CPUDevice, float, int32, Eigen::internal::MeanReducer<float>>",
@@ -68,7 +69,7 @@
 constexpr inline bool ShouldRegisterOp(const char op[]) {
   return false
      || isequal(op, "Add")
-     || isequal(op, "ApplyGradientDescent")
+     || isequal(op, "ApplyAdam")
      || isequal(op, "ArgMax")
      || isequal(op, "Assign")
      || isequal(op, "BroadcastGradientArgs")
@@ -78,6 +79,7 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "ExpandDims")
      || isequal(op, "Fill")
      || isequal(op, "Greater")
+     || isequal(op, "HistogramSummary")
      || isequal(op, "Identity")
      || isequal(op, "MatMul")
      || isequal(op, "Mean")
