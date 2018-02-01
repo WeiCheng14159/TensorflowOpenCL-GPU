@@ -97,29 +97,29 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  std::cout << "[Root directory] = " << root_dir << std::endl;
+  LOG(INFO) << "[Root directory] = " << root_dir ;
 
   // Prepare MNIST dataset
-    std::cout << "[MNIST Dataset Directory] = " << mnist_dir << std::endl;
+    LOG(INFO) << "[MNIST Dataset Directory] = " << mnist_dir ;
 
     // Load MNIST data
     mnist::MNIST_dataset<std::vector, std::vector<uint8_t>, uint8_t> dataset =
         mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>(mnist_dir);
 
-    std::cout << "[MNIST Dataset] Num of Training Images = " <<
-      dataset.training_images.size() << std::endl;
-    std::cout << "[MNIST Dataset] Num of Training Labels = " <<
-      dataset.training_labels.size() << std::endl;
-    std::cout << "[MNIST Dataset] Num of Test     Images = " <<
-      dataset.test_images.size() << std::endl;
-    std::cout << "[MNIST Dataset] Num of Test     Labels = " <<
-      dataset.test_labels.size() << std::endl;
+    LOG(INFO) << "[MNIST Dataset] Num of Training Images = " <<
+      dataset.training_images.size() ;
+    LOG(INFO) << "[MNIST Dataset] Num of Training Labels = " <<
+      dataset.training_labels.size() ;
+    LOG(INFO) << "[MNIST Dataset] Num of Test     Images = " <<
+      dataset.test_images.size() ;
+    LOG(INFO) << "[MNIST Dataset] Num of Test     Labels = " <<
+      dataset.test_labels.size() ;
 
     input_width  = std::sqrt( dataset.training_images[0].size() );
     input_height = std::sqrt( dataset.training_images[0].size() );
 
-    std::cout << "[MNIST Dataset] Input Image Size       = " <<
-      input_width << "x" << input_height << std::endl;
+    LOG(INFO) << "[MNIST Dataset] Input Image Size       = " <<
+      input_width << "x" << input_height ;
 
   // Load TF model.
   std::unique_ptr<tensorflow::Session> session;
@@ -129,11 +129,11 @@ int main(int argc, char* argv[]) {
     LOG(ERROR) << load_graph_status;
     return -1;
   }
-  std::cout << "[TF Model File Loaded From Directory] = " << graph_path << std::endl;
+  LOG(INFO) << "[TF Model File Loaded From Directory] = " << graph_path ;
 
   // Initialize our variables
   TF_CHECK_OK( session->Run( {}, {}, {"init"}, nullptr ) );
-  std::cout << "[TF initialize all variables]" << std::endl;
+  LOG(INFO) << "[TF initialize all variables]" ;
 
   // Load MNIST training data & labels into TF Tensors
 
@@ -185,9 +185,9 @@ int main(int argc, char* argv[]) {
       }
 
       // Tensor info
-      std::cout << "Batch " << batch_idx << " of data loaded into Tensor\n" <<
-      " [Image]"<< batch_img_tensor.DebugString()      << std::endl <<
-      " [Label]"<< batch_label_tensor.DebugString()    << std::endl;
+      LOG(INFO) << "Batch " << batch_idx << " of data loaded into Tensor\n" <<
+      " [Image] " << batch_img_tensor.DebugString() << "\n"
+      " [Label] " << batch_label_tensor.DebugString() << "\n";
 
   } // End of Batch loop
 
