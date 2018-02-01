@@ -36,7 +36,6 @@ img_size = 28
 def main(_):
   # Import data
   mnist = input_data.read_data_sets(FLAGS.data_dir)
-  logs_path = FLAGS.log_dir
 
   # Create the model
   x = tf.placeholder(tf.float32, [None, img_size * img_size ], name="input")
@@ -58,8 +57,9 @@ def main(_):
   tf.summary.scalar("cross_entropy", cross_entropy)
   # Create a summary to monitor accuracy tensor
   tf.summary.scalar("accuracy", accuracy)
-
+  # Create a summary histogram for weight matrix
   tf.summary.histogram("W", W)
+  # Create a summary histogram for biased vector
   tf.summary.histogram("b", b)
 
   # Merge all summaries into a single op
@@ -70,31 +70,19 @@ def main(_):
   sess = tf.Session()
   sess.run(init_op)
 
-  summary_writer = tf.summary.FileWriter(logs_path, graph=sess.graph)
-
-  num_steps = 10000
-  setp_to_test = 10
-  batch_size = 100
+  summary_writer = tf.summary.FileWriter( FLAGS.log_dir, graph=sess.graph)
 
   # Train
-  for step in range(num_steps):
-    batch_xs, batch_ys = mnist.train.next_batch(batch_size)
-
-    if step % setp_to_test == 0:
-
-        error, acc, summary = sess.run([ cross_entropy, accuracy, merged_summary_op ], \
+  for step in range( FLAGS.max_steps ):
+    batch_xs, batch_ys = mnist.train.next_batch( FLAGS.batch_size )
+    if step % 100 == 0:
+        acc, summary = sess.run([ accuracy, merged_summary_op ], \
             feed_dict={ x: mnist.test.images, y: mnist.test.labels })
-
         print('step %d, training accuracy %f' % (step, acc))
         summary_writer.add_summary(summary, step)
-    else:
-        ts, summary = sess.run([ train_step, merged_summary_op ], \
-            feed_dict={ x: batch_xs, y: batch_ys })
-
-  # Test trained model
-  print('test accuracy %f' % sess.run(accuracy, feed_dict={x: mnist.test.images,
-    y: mnist.test.labels}) )
-
+    train_step.run( feed_dict={ x: batch_xs, y: batch_ys }, session=sess)
+  print('test accuracy %f' %  accuracy.eval(feed_dict={
+      x: mnist.test.images, y: mnist.test.labels }, session=sess))
   tf.train.write_graph(sess.graph_def,
                         './',
                         'mnist_100_mlp.pb', as_text=False)
@@ -105,5 +93,9 @@ if __name__ == '__main__':
                       help='Directory for storing input data')
   parser.add_argument('--log_dir', type=str, default='/tmp/tensorflow_logs/mlpnet',
                       help='Directory for training data')
+  parser.add_argument('--batch_size', type=int, default=50,
+                      help='Batch size')
+  parser.add_argument('--max_steps', type=int, default=2000,
+                      help='Maximum training steps')
   FLAGS, unparsed = parser.parse_known_args()
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
