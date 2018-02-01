@@ -20,3 +20,4 @@ adb push ./MNIST_data/train-labels-idx1-ubyte $REMOTE_DIR/MNIST_data/
 # Send the trained model: mlp/cnn network
 adb push mnist_100_cnn.pb $REMOTE_DIR
 adb push mnist_100_mlp.pb $REMOTE_DIR
+adb push mnist_100_dnn.pb $REMOTE_DIR
