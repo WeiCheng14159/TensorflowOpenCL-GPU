@@ -70,6 +70,7 @@ int main(int argc, char* argv[]) {
   int32  input_width      = 28;
   int32  input_height     = 28;
   int32  batch_size       = 10;
+  int32  max_steps        = 100000;
 
   std::vector<Flag> flag_list = {
       Flag("root_dir",      &root_dir,
@@ -81,6 +82,7 @@ int main(int argc, char* argv[]) {
       Flag("test_Ops",      &test_Ops,      "name of cost Ops"),
       Flag("train_Ops",     &train_Ops,     "name of training Ops"),
       Flag("batch_size",    &batch_size,    "training batch size"),
+      Flag("max_steps",     &max_steps,     "maximum number of taining steps"),
   };
 
   string usage = tensorflow::Flags::Usage(argv[0], flag_list);
@@ -149,6 +151,9 @@ int main(int argc, char* argv[]) {
 
     for( auto batch_idx = 0 ; batch_idx < dataset.training_images.size() / batch_size;
       batch_idx ++ ){ // Batch loop
+
+      // If the number of training steps > max_steps then stop training
+      if ( ( batch_idx + 1 ) * batch_size > max_steps ){ break; }
 
       // image vector with dimension { 1, batch_size x input_width x input_height }
       std::vector<float> batch_img_vec;
