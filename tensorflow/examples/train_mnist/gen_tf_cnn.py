@@ -41,13 +41,12 @@ img_size = 28
 def main(_):
 
     # Import data
-    mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
-    logs_path = FLAGS.log_dir
+    mnist = input_data.read_data_sets(FLAGS.data_dir)
 
     # Create the model
     x = tf.placeholder(tf.float32, shape=[None, img_size * img_size ], name='input')
     x_image = tf.reshape(x, [-1, img_size, img_size, 1])
-    y = tf.placeholder(tf.float32, shape=[None, 10], name='output')
+    y = tf.placeholder(tf.int64, shape=[None], name='output')
 
     # fist conv layer
     with tf.name_scope('convLayer1'):
@@ -86,13 +85,13 @@ def main(_):
         y_f_softmax = tf.nn.softmax(y_out)
 
     # loss
-    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=y, logits=y_out))
+    loss = tf.losses.sparse_softmax_cross_entropy(labels=y, logits=y_f_softmax)
 
     # train step
     train_step = tf.train.AdamOptimizer(1e-4).minimize(loss, name="train")
 
     # accuracy
-    correct_prediction = tf.equal(tf.argmax(y_f_softmax, 1), tf.argmax(y, 1))
+    correct_prediction = tf.equal(tf.argmax(y_f_softmax, 1), y)
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='test')
 
     # Create a summary to monitor loss tensor
@@ -112,31 +111,19 @@ def main(_):
     sess.run(init_op)
 
     # Log writer for Tensorboard
-    summary_writer = tf.summary.FileWriter(logs_path, graph=sess.graph)
+    print('Saving training data to: %s' % FLAGS.log_dir)
+    summary_writer = tf.summary.FileWriter(FLAGS.log_dir, graph=sess.graph)
 
-    num_steps = 1000
-    setp_to_test = 10
-    batch_size = 100
-
-    for step in range(num_steps):
-
-        batch_xs, batch_ys = mnist.train.next_batch(batch_size)
-
-        if step % setp_to_test == 0:
-
-            summary = sess.run(merged_summary_op, feed_dict={x: batch_xs, y: batch_ys, keep_prob: 1.0})
+    for step in range( FLAGS.max_steps ):
+        batch_xs, batch_ys = mnist.train.next_batch( FLAGS.batch_size )
+        if step % 100 == 0:
+            acc, summary = sess.run( [ accuracy, merged_summary_op ], \
+                feed_dict={ x: mnist.test.images, y: mnist.test.labels, keep_prob: 1.0})
+            print('step %d, training accuracy %g' % (step, acc))
             summary_writer.add_summary(summary, step)
-
-            train_accuracy = accuracy.eval( { x: batch_xs, y: batch_ys, keep_prob: 1.0}, sess )
-            print('step %d, training accuracy %g' % (step, train_accuracy))
-        else:
-            ts, summary = sess.run([ train_step, merged_summary_op ], \
-                feed_dict={ x: batch_xs, y: batch_ys, keep_prob: 0.5})
-
-    # Test trained model
-    print('test accuracy %f' % sess.run(accuracy, feed_dict={x: mnist.test.images,
-        y: mnist.test.labels, keep_prob: 1.0}) )
-
+        train_step.run(feed_dict={ x: batch_xs, y: batch_ys, keep_prob: 0.5}, session=sess)
+    print('test accuracy %f' % accuracy.eval(feed_dict={
+        x: mnist.test.images, y: mnist.test.labels, keep_prob: 1.0}, session=sess))
     tf.train.write_graph(sess.graph_def,
                         './',
                         'mnist_100_cnn.pb', as_text=False)
@@ -147,5 +134,9 @@ if __name__ == '__main__':
                       help='Directory for storing input data')
     parser.add_argument('--log_dir', type=str, default='/tmp/tensorflow_logs/convnet',
                       help='Directory for training data')
+    parser.add_argument('--batch_size', type=int, default=50,
+                      help='Batch size')
+    parser.add_argument('--max_steps', type=int, default=2000,
+                      help='Maximum training steps')
     FLAGS, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
