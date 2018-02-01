@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
       Flag("graph_name",    &graph_name,    "graph to be executed"),
       Flag("mnist_dir",     &mnist_dir,     "MNIST dataset directory"),
       Flag("T_input",       &T_input,       "name of input Tensor"),
-      Flag("T_label",       &T_label,      "name of output Tensor"),
+      Flag("T_label",       &T_label,       "name of output Tensor"),
       Flag("test_Ops",      &test_Ops,      "name of cost Ops"),
       Flag("train_Ops",     &train_Ops,     "name of training Ops"),
       Flag("batch_size",    &batch_size,    "training batch size"),
@@ -130,6 +130,10 @@ int main(int argc, char* argv[]) {
     return -1;
   }
   std::cout << "[TF Model File Loaded From Directory] = " << graph_path << std::endl;
+
+  // Initialize our variables
+  TF_CHECK_OK( session->Run( {}, {}, {"init"}, nullptr ) );
+  std::cout << "[TF initialize all variables]" << std::endl;
 
   // Load MNIST training data & labels into TF Tensors
 
