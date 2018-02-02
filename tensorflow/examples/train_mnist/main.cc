@@ -69,6 +69,7 @@ int main(int argc, char* argv[]) {
   string T_label          = "output";
   string test_Ops         = "test";
   string train_Ops        = "train";
+  string dropout_Ops      = "Dropout/Placeholder";
   int32  input_width      = 28;
   int32  input_height     = 28;
   int32  batch_size       = 50;
@@ -85,6 +86,7 @@ int main(int argc, char* argv[]) {
       Flag("T_label",       &T_label,       "name of output Tensor"),
       Flag("test_Ops",      &test_Ops,      "name of cost Ops"),
       Flag("train_Ops",     &train_Ops,     "name of training Ops"),
+      Flag("dropout_Ops",   &dropout_Ops,   "name of Dropout layer Ops"),
       Flag("batch_size",    &batch_size,    "training batch size"),
       Flag("max_steps",     &max_steps,     "maximum number of taining steps"),
       Flag("drop_prob",     &drop_prob[0],  "Drop out layer (if any) probability"),
@@ -203,11 +205,11 @@ int main(int argc, char* argv[]) {
           { T_label, batch_label_tensor } }, {}, { train_Ops }, nullptr) );
       }else if( graph_name == "mnist_100_cnn.pb" ){
         TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
-          { T_label, batch_label_tensor }, { "Dropout/Placeholder", dropout_prob_tensor } }, {},
+          { T_label, batch_label_tensor }, { dropout_Ops, dropout_prob_tensor } }, {},
           { train_Ops }, nullptr) );
       }else if( graph_name == "mnist_100_dnn.pb" ){
         TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
-          { T_label, batch_label_tensor }, { "dropout/Placeholder", dropout_prob_tensor } }, {},
+          { T_label, batch_label_tensor }, { dropout_Ops, dropout_prob_tensor } }, {},
           { train_Ops }, nullptr) );
       }else{
         LOG(ERROR) << "graph_name not recognized";
@@ -274,11 +276,11 @@ int main(int argc, char* argv[]) {
         { T_label, test_label_tensor } }, { test_Ops }, {}, &outputs ) );
     }else if( graph_name == "mnist_100_cnn.pb" ){
       TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
-        { T_label, test_label_tensor }, { "Dropout/Placeholder", dropout_prob_tensor } }, { test_Ops },
+        { T_label, test_label_tensor }, { dropout_Ops, dropout_prob_tensor } }, { test_Ops },
         { }, &outputs) );
     }else if( graph_name == "mnist_100_dnn.pb" ){
       TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
-        { T_label, test_label_tensor }, { "dropout/Placeholder", dropout_prob_tensor } },
+        { T_label, test_label_tensor }, { dropout_Ops, dropout_prob_tensor } },
         { test_Ops }, { }, &outputs) );
     }else{
       LOG(ERROR) << "graph_name not recognized";
