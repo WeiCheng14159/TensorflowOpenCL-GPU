@@ -38,11 +38,12 @@ using tensorflow::Status;
 using tensorflow::string;
 using tensorflow::int32;
 using namespace tensorflow;
+using namespace std;
 
 // Reads a model graph definition from disk, and creates a session object you
 // can use to run it.
 Status LoadGraph(const string& graph_file_name,
-                 std::unique_ptr<Session>* session) {
+                 unique_ptr<Session>* session) {
   GraphDef graph_def;
   Status load_graph_status =
       ReadBinaryProto(Env::Default(), graph_file_name, &graph_def);
@@ -72,7 +73,7 @@ int main(int argc, char* argv[]) {
   int32  batch_size       = 50;
   int32  max_steps        = 100000;
 
-  std::vector<Flag> flag_list = {
+  vector<Flag> flag_list = {
       Flag("root_dir",      &root_dir,
         "interpret graph file names relative to this directory"),
       Flag("graph_name",    &graph_name,    "graph to be executed"),
@@ -105,8 +106,8 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << "[MNIST Dataset Directory] = " << mnist_dir ;
 
     // Load MNIST data
-    mnist::MNIST_dataset<std::vector, std::vector<uint8_t>, uint8_t> dataset =
-        mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>(mnist_dir);
+    mnist::MNIST_dataset<vector, vector<uint8_t>, uint8_t> dataset =
+        mnist::read_dataset<vector, vector, uint8_t, uint8_t>(mnist_dir);
 
     LOG(INFO) << "[MNIST Dataset] Num of Training Images = " <<
       dataset.training_images.size() ;
@@ -117,14 +118,14 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << "[MNIST Dataset] Num of Test     Labels = " <<
       dataset.test_labels.size() ;
 
-    input_width  = std::sqrt( dataset.training_images[0].size() );
-    input_height = std::sqrt( dataset.training_images[0].size() );
+    input_width  = sqrt( dataset.training_images[0].size() );
+    input_height = sqrt( dataset.training_images[0].size() );
 
     LOG(INFO) << "[MNIST Dataset] Input Image Size       = " <<
       input_width << "x" << input_height ;
 
   // Load TF model.
-  std::unique_ptr<Session> session;
+  unique_ptr<Session> session;
   string graph_path = io::JoinPath(root_dir, graph_name);
   Status load_graph_status = LoadGraph(graph_path, &session);
   if (!load_graph_status.ok()) {
@@ -154,16 +155,16 @@ int main(int argc, char* argv[]) {
       if ( ( batch_idx + 1 ) * batch_size > max_steps ){ break; }
 
       // image vector with dimension { 1, batch_size x input_width x input_height }
-      std::vector<float> batch_img_vec;
+      vector<float> batch_img_vec;
       // label vector with dimension { 1, batch_size }
-      std::vector<long int> batch_label_vec;
+      vector<long int> batch_label_vec;
 
       for ( auto batch_itr = 0 ; batch_itr < batch_size ; batch_itr ++ )
       { // Within a single input image
 
         // vec_img with dim { 1, input_width * input_height }
-        std::vector<uint8_t> vec_img = dataset.training_images[ batch_idx * batch_size + batch_itr ];
-        for( auto pixel = 0 ; pixel < vec_img.size() ; pixel ++ ){
+        vector<uint8_t> vec_img = dataset.training_images[ batch_idx * batch_size + batch_itr ];
+        for( int pixel = 0 ; pixel < vec_img.size() ; pixel ++ ){
           // Cast image data from uint_8 -> float
           batch_img_vec.push_back( (float)( vec_img[pixel] ) );
         }
@@ -175,10 +176,10 @@ int main(int argc, char* argv[]) {
       } // Within a single input image
 
       // Copy a batch of image data to TF Tensor
-      std::copy_n( batch_img_vec.begin(), batch_img_vec.size(),
+      copy_n( batch_img_vec.begin(), batch_img_vec.size(),
         batch_img_tensor.flat<float>().data() );
       // Copy a batch of label data to TF Tensor
-      std::copy_n( batch_label_vec.begin(), batch_label_vec.size(),
+      copy_n( batch_label_vec.begin(), batch_label_vec.size(),
         batch_label_tensor.flat<long long>().data() );
 
       // Tensor info
@@ -186,12 +187,17 @@ int main(int argc, char* argv[]) {
       " [Image] " << batch_img_tensor.DebugString() << "\n"
       " [Label] " << batch_label_tensor.DebugString() << "\n";
 
+      // Copy drop out probability to TF Tensor
+      copy_n( drop_prob.begin(), drop_prob.size(), dropout_prob_tensor.flat<float>().data() );
+
       // Traing the model for each batch
       TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
         { T_label, batch_label_tensor } }, {}, { train_Ops }, nullptr) );
       LOG(INFO) << "Batch " << batch_idx << " trained\n" ;
 
   } // End of Training Batch Loop
+
+  vector<float> avg_accu;
 
   // Load MNIST testing data & labels into TF Tensors
 
@@ -201,16 +207,16 @@ int main(int argc, char* argv[]) {
     // test_label_tensor with dimenstion { 10000, 1 } = { 10000, 1 }
     Tensor test_label_tensor(DT_INT64, TensorShape( { 10000 } ) );
 
-    // image vector with dimension { 1, 10000 x input_width x input_height }
-    std::vector<float> test_img_vec;
-    // label vector with dimension { 1, 10000 }
-    std::vector<long int> test_label_vec;
+    // image vector with dimension { 1, batch_size x input_width x input_height }
+    vector<float> test_img_vec;
+    // label vector with dimension { 1, batch_size }
+    vector<long int> test_label_vec;
 
     for ( auto batch_itr = 0 ; batch_itr < 10000 ; batch_itr ++ )
     { // Within a single input image
 
       // vec_img with dim { 1, input_width * input_height }
-      std::vector<uint8_t> vec_img = dataset.test_images[ batch_itr ];
+      vector<uint8_t> vec_img = dataset.test_images[ batch_idx * batch_size + batch_itr ];
       for( auto pixel = 0 ; pixel < vec_img.size() ; pixel ++ ){
         // Cast image data from uint_8 -> float
         test_img_vec.push_back( (float)( vec_img[pixel] ) );
@@ -222,11 +228,11 @@ int main(int argc, char* argv[]) {
 
     } // Within a single input image
 
-    // Copy testing image data to TF Tensor
-    std::copy_n( test_img_vec.begin(), test_img_vec.size(),
+    // Copy a batch testing image data to TF Tensor
+    copy_n( test_img_vec.begin(), test_img_vec.size(),
       test_img_tensor.flat<float>().data() );
-    // Copy testing label data to TF Tensor
-    std::copy_n( test_label_vec.begin(), test_label_vec.size(),
+    // Copy a batch testing label data to TF Tensor
+    copy_n( test_label_vec.begin(), test_label_vec.size(),
       test_label_tensor.flat<long long>().data() );
 
     // Tensor info
