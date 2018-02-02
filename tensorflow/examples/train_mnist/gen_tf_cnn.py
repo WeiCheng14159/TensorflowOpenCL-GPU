@@ -89,7 +89,7 @@ def main(_):
 
     # train step
     with tf.name_scope('adam_optimizer'):
-        train_step = tf.train.AdamOptimizer().minimize(loss, name="train")
+        train_step = tf.train.AdamOptimizer(1e-4).minimize(loss, name="train")
 
     # accuracy
     correct_prediction = tf.equal(tf.argmax(y_f_softmax, 1), y)
