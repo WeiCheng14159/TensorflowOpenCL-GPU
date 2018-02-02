@@ -63,7 +63,7 @@ Status LoadGraph(const string& graph_file_name,
 int main(int argc, char* argv[]) {
 
   string root_dir         = "/data/local/tmp/";
-  string graph_name       = "mnist_100_mlp.pb";
+  string graph_name       = "mnist_mlp.pb";
   string mnist_dir        = root_dir + "MNIST_data/";
   string T_input          = "input";
   string T_label          = "output";
@@ -200,14 +200,14 @@ int main(int argc, char* argv[]) {
       copy_n( drop_prob.begin(), drop_prob.size(), dropout_prob_tensor.flat<float>().data() );
 
       // Traing the model for each batch
-      if ( graph_name == "mnist_100_mlp.pb" ){
+      if ( graph_name == "mnist_mlp.pb" ){
         TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
           { T_label, batch_label_tensor } }, {}, { train_Ops }, nullptr) );
-      }else if( graph_name == "mnist_100_cnn.pb" ){
+      }else if( graph_name == "mnist_cnn.pb" ){
         TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
           { T_label, batch_label_tensor }, { dropout_Ops, dropout_prob_tensor } }, {},
           { train_Ops }, nullptr) );
-      }else if( graph_name == "mnist_100_dnn.pb" ){
+      }else if( graph_name == "mnist_dnn.pb" ){
         TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
           { T_label, batch_label_tensor }, { dropout_Ops, dropout_prob_tensor } }, {},
           { train_Ops }, nullptr) );
@@ -271,14 +271,14 @@ int main(int argc, char* argv[]) {
     copy_n( drop_prob.begin(), drop_prob.size(), dropout_prob_tensor.flat<float>().data() );
 
     // Test the accuracy of TF model
-    if ( graph_name == "mnist_100_mlp.pb" ){
+    if ( graph_name == "mnist_mlp.pb" ){
       TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
         { T_label, test_label_tensor } }, { test_Ops }, {}, &outputs ) );
-    }else if( graph_name == "mnist_100_cnn.pb" ){
+    }else if( graph_name == "mnist_cnn.pb" ){
       TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
         { T_label, test_label_tensor }, { dropout_Ops, dropout_prob_tensor } }, { test_Ops },
         { }, &outputs) );
-    }else if( graph_name == "mnist_100_dnn.pb" ){
+    }else if( graph_name == "mnist_dnn.pb" ){
       TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
         { T_label, test_label_tensor }, { dropout_Ops, dropout_prob_tensor } },
         { test_Ops }, { }, &outputs) );
