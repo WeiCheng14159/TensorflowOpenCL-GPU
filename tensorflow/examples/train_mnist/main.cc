@@ -9,6 +9,7 @@ By Cheng Wei on 2018/Jan/24
 #include <vector>
 #include <iostream>
 #include <math.h>
+#include <numeric>
 
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/cc/ops/standard_ops.h"
@@ -200,19 +201,23 @@ int main(int argc, char* argv[]) {
   vector<float> avg_accu;
 
   // Load MNIST testing data & labels into TF Tensors
+  for( auto batch_idx = 0 ; batch_idx < dataset.test_images.size() / batch_size;
+    batch_idx ++ )
+  { // Testing Batch Loop
 
-    // test_img_tensor with dimenstion { 10000, input_width * input_height } = { 10000, 28*28 }
-    Tensor test_img_tensor(DT_FLOAT, TensorShape( { 10000, input_width * input_height } ) );
+    // test_img_tensor with dimenstion { batch_size, input_width * input_height }
+    // = { batch_size, 28*28 }
+    Tensor test_img_tensor(DT_FLOAT, TensorShape( { batch_size, input_width * input_height } ) );
 
-    // test_label_tensor with dimenstion { 10000, 1 } = { 10000, 1 }
-    Tensor test_label_tensor(DT_INT64, TensorShape( { 10000 } ) );
+    // test_label_tensor with dimenstion { batch_size, 1 } = { batch_size, 1 }
+    Tensor test_label_tensor(DT_INT64, TensorShape( { batch_size } ) );
 
     // image vector with dimension { 1, batch_size x input_width x input_height }
     vector<float> test_img_vec;
     // label vector with dimension { 1, batch_size }
     vector<long int> test_label_vec;
 
-    for ( auto batch_itr = 0 ; batch_itr < 10000 ; batch_itr ++ )
+    for ( auto batch_itr = 0 ; batch_itr < batch_size ; batch_itr ++ )
     { // Within a single input image
 
       // vec_img with dim { 1, input_width * input_height }
@@ -223,7 +228,7 @@ int main(int argc, char* argv[]) {
       }
 
       // vec_label with dim { 1, 1 }
-      uint8_t vec_label = dataset.test_labels[ batch_itr ];
+      uint8_t vec_label = dataset.test_labels[ batch_idx * batch_size + batch_itr ];
       test_label_vec.push_back( (long int)(vec_label) );
 
     } // Within a single input image
@@ -236,16 +241,37 @@ int main(int argc, char* argv[]) {
       test_label_tensor.flat<long long>().data() );
 
     // Tensor info
-    LOG(INFO) << "Testing data loaded into Tensor\n" <<
+    LOG(INFO) << "[Test] Batch " << batch_idx << " loaded into Tensor\n" <<
     " [Image] " << test_img_tensor.DebugString() << "\n"
     " [Label] " << test_label_tensor.DebugString() << "\n";
 
-  // Output Tensor ( a vector list of Tensors )
-  std::vector<Tensor> outputs;
-  // Test the accuracy of TF model
-  TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
-    { T_label, test_label_tensor } }, { test_Ops }, {}, &outputs ) );
-  // Print Accuracy
-  LOG(INFO) << "Accuracy " << outputs[0].scalar<float>()(0) * 100 << "\%";
+    // Output Tensor ( a vector list of Tensors )
+    vector<Tensor> outputs;
+    // Copy drop out probability to TF Tensor
+    copy_n( drop_prob.begin(), drop_prob.size(), dropout_prob_tensor.flat<float>().data() );
 
+    // Test the accuracy of TF model
+    if ( graph_name == "mnist_100_mlp.pb" ){
+      TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
+        { T_label, test_label_tensor } }, { test_Ops }, {}, &outputs ) );
+    }else if( graph_name == "mnist_100_cnn.pb" ){
+      TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
+        { T_label, test_label_tensor }, { "Dropout/Placeholder", dropout_prob_tensor } }, { test_Ops },
+        { }, &outputs) );
+    }else if( graph_name == "mnist_100_dnn.pb" ){
+      TF_CHECK_OK( session->Run( { { T_input, test_img_tensor },
+        { T_label, test_label_tensor }, { "dropout/Placeholder", dropout_prob_tensor } },
+        { test_Ops }, { }, &outputs) );
+    }else{
+      LOG(ERROR) << "graph_name not recognized";
+    }
+
+    // Print Accuracy
+    LOG(INFO) << "Accuracy " << outputs[0].scalar<float>()(0) * 100 << "\%\n";
+    avg_accu.push_back( outputs[0].scalar<float>()(0) );
+
+  } // Testing Batch Loop
+
+  LOG(INFO) << "Overall testing accuracy " << 100 * accumulate(
+    avg_accu.begin(), avg_accu.end(), 0.0f) / (int)(dataset.test_images.size() / batch_size);
 } // End of main
