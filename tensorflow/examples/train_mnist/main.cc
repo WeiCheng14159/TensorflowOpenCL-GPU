@@ -73,6 +73,8 @@ int main(int argc, char* argv[]) {
   int32  input_height     = 28;
   int32  batch_size       = 50;
   int32  max_steps        = 100000;
+  vector<float>
+         drop_prob        = { 0.5 } ;
 
   vector<Flag> flag_list = {
       Flag("root_dir",      &root_dir,
@@ -85,6 +87,7 @@ int main(int argc, char* argv[]) {
       Flag("train_Ops",     &train_Ops,     "name of training Ops"),
       Flag("batch_size",    &batch_size,    "training batch size"),
       Flag("max_steps",     &max_steps,     "maximum number of taining steps"),
+      Flag("drop_prob",     &drop_prob[0],  "Drop out layer (if any) probability"),
   };
 
   string usage = Flags::Usage(argv[0], flag_list);
@@ -148,6 +151,9 @@ int main(int argc, char* argv[]) {
     // batch_label_tensor with dimenstion { batch_size, 1 } = { batch_size, 1 }
     Tensor batch_label_tensor( DT_INT64, TensorShape( { batch_size } ) );
 
+    // dropout_prob_tensor with dimenstion { 1 }
+    Tensor dropout_prob_tensor( DT_FLOAT, TensorShape( { 1 } ) );
+
     for( auto batch_idx = 0 ; batch_idx < dataset.training_images.size() / batch_size;
       batch_idx ++ )
     { // Training Batch Loop
@@ -192,8 +198,20 @@ int main(int argc, char* argv[]) {
       copy_n( drop_prob.begin(), drop_prob.size(), dropout_prob_tensor.flat<float>().data() );
 
       // Traing the model for each batch
-      TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
-        { T_label, batch_label_tensor } }, {}, { train_Ops }, nullptr) );
+      if ( graph_name == "mnist_100_mlp.pb" ){
+        TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
+          { T_label, batch_label_tensor } }, {}, { train_Ops }, nullptr) );
+      }else if( graph_name == "mnist_100_cnn.pb" ){
+        TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
+          { T_label, batch_label_tensor }, { "Dropout/Placeholder", dropout_prob_tensor } }, {},
+          { train_Ops }, nullptr) );
+      }else if( graph_name == "mnist_100_dnn.pb" ){
+        TF_CHECK_OK( session->Run( { { T_input, batch_img_tensor },
+          { T_label, batch_label_tensor }, { "dropout/Placeholder", dropout_prob_tensor } }, {},
+          { train_Ops }, nullptr) );
+      }else{
+        LOG(ERROR) << "graph_name not recognized";
+      }
       LOG(INFO) << "Batch " << batch_idx << " trained\n" ;
 
   } // End of Training Batch Loop
