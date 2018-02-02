@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "tensorflow/compiler/xla/client/client_library.h"
 #include "tensorflow/compiler/xla/client/computation_builder.h"
+#include "tensorflow/compiler/xla/client/executable_build_options.h"
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/xla/service/shaped_buffer.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
@@ -93,7 +94,8 @@ class LocalComputation {
  public:
   LocalComputation(Computation computation);
   StatusOr<CompiledLocalComputation*> Compile(
-      const std::vector<Shape>& argument_shapes);
+      const std::vector<Shape>& argument_shapes,
+      const ExecutableBuildOptions* build_options);
   const Computation& computation() const;
 
  private:
@@ -172,10 +174,6 @@ class LocalComputationBuilder {
       const ComputationDataHandle& source,
       const ComputationDataHandle& init_value, const LocalComputation& scatter);
 
-  ComputationDataHandle Select(const ComputationDataHandle& pred,
-                               const ComputationDataHandle& on_true,
-                               const ComputationDataHandle& on_false);
-
   ComputationDataHandle Tuple(
       tensorflow::gtl::ArraySlice<ComputationDataHandle> elements);
 
@@ -252,6 +250,14 @@ class LocalComputationBuilder {
       (const ComputationDataHandle& lhs, const ComputationDataHandle& rhs, \
        tensorflow::gtl::ArraySlice<int64> broadcast_dimensions))
 
+#define _FORWARD_TRIOP(method_name)                                        \
+  _FORWARD(                                                                \
+      method_name, ComputationDataHandle,                                  \
+      (const ComputationDataHandle& lhs, const ComputationDataHandle& rhs, \
+       const ComputationDataHandle& ehs))
+
+  _FORWARD_TRIOP(Select)
+  _FORWARD_TRIOP(Clamp)
   _FORWARD_BINOP(Eq)
   _FORWARD_BINOP(Ne)
   _FORWARD_BINOP(Ge)
@@ -272,6 +278,7 @@ class LocalComputationBuilder {
   _FORWARD_UNOP(Exp)
   _FORWARD_UNOP(Floor)
   _FORWARD_UNOP(Ceil)
+  _FORWARD_UNOP(Round)
   _FORWARD_UNOP(Log)
   _FORWARD_UNOP(Sign)
   _FORWARD_UNOP(Cos)
@@ -288,6 +295,7 @@ class LocalComputationBuilder {
 #undef _FORWARD
 #undef _FORWARD_UNOP
 #undef _FORWARD_BINOP
+#undef _FORWARD_TRIOP
 
  private:
   ComputationBuilder builder_;

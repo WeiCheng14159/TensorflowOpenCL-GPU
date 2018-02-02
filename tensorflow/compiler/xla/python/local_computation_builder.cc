@@ -233,7 +233,8 @@ LocalComputation::LocalComputation(Computation computation)
     : computation_(std::move(computation)) {}
 
 StatusOr<CompiledLocalComputation*> LocalComputation::Compile(
-    const std::vector<Shape>& argument_shapes) {
+    const std::vector<Shape>& argument_shapes,
+    const ExecutableBuildOptions* build_options) {
   std::vector<const Shape*> argument_shape_pointers;
   argument_shape_pointers.reserve(argument_shapes.size());
   for (auto& argument_shape : argument_shapes) {
@@ -242,6 +243,9 @@ StatusOr<CompiledLocalComputation*> LocalComputation::Compile(
 
   LocalClient* client = GetOrCreateLocalClient();
   ExecutableBuildOptions options;
+  if (build_options != nullptr) {
+    options = *build_options;
+  }
   TF_ASSIGN_OR_RETURN(
       auto local_executable,
       client->Compile(computation_, argument_shape_pointers, options));
@@ -363,12 +367,6 @@ LocalComputationBuilder::SelectAndScatterWithGeneralPadding(
       source, init_value, scatter.computation());
 }
 
-ComputationDataHandle LocalComputationBuilder::Select(
-    const ComputationDataHandle& pred, const ComputationDataHandle& on_true,
-    const ComputationDataHandle& on_false) {
-  return builder_.Select(pred, on_true, on_false);
-}
-
 ComputationDataHandle LocalComputationBuilder::Tuple(
     tensorflow::gtl::ArraySlice<ComputationDataHandle> elements) {
   return builder_.Tuple(elements);
@@ -483,6 +481,15 @@ ComputationDataHandle LocalComputationBuilder::While(
        tensorflow::gtl::ArraySlice<int64> broadcast_dimensions),           \
       (lhs, rhs, broadcast_dimensions))
 
+#define _FORWARD_TRIOP(method_name)                                        \
+  _FORWARD(                                                                \
+      method_name, ComputationDataHandle,                                  \
+      (const ComputationDataHandle& lhs, const ComputationDataHandle& rhs, \
+       const ComputationDataHandle& ehs),                                  \
+      (lhs, rhs, ehs))
+
+_FORWARD_TRIOP(Select)
+_FORWARD_TRIOP(Clamp)
 _FORWARD_BINOP(Eq)
 _FORWARD_BINOP(Ne)
 _FORWARD_BINOP(Ge)
@@ -503,6 +510,7 @@ _FORWARD_UNOP(Abs)
 _FORWARD_UNOP(Exp)
 _FORWARD_UNOP(Floor)
 _FORWARD_UNOP(Ceil)
+_FORWARD_UNOP(Round)
 _FORWARD_UNOP(Log)
 _FORWARD_UNOP(Sign)
 _FORWARD_UNOP(Cos)
@@ -519,6 +527,7 @@ _FORWARD_UNOP(Sort)
 #undef _FORWARD
 #undef _FORWARD_UNOP
 #undef _FORWARD_BINOP
+#undef _FORWARD_TRIOP
 
 void DeleteLocalShapedBuffer(LocalShapedBuffer* local_shaped_buffer) {
   delete local_shaped_buffer;

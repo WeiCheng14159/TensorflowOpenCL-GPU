@@ -41,8 +41,10 @@ from tensorflow.python.ops import gen_io_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import script_ops
 from tensorflow.python.util import deprecation
+from tensorflow.python.util.tf_export import tf_export
 
 
+@tf_export("data.Dataset")
 class Dataset(object):
   """Represents a potentially large set of elements.
 
@@ -556,6 +558,8 @@ class Dataset(object):
         - /path/to/dir/b.py
         - /path/to/dir/c.py
 
+    NOTE: The order of the file names returned can be non-deterministic.
+
     Args:
       file_pattern: A string or scalar string `tf.Tensor`, representing
         the filename pattern that will be matched.
@@ -899,10 +903,11 @@ class Dataset(object):
 
     Args:
       transformation_func: A function that takes one `Dataset` argument and
-        returns a `Dataset`.
+          returns a `Dataset`.
 
     Returns:
-      Dataset: The `Dataset` returned by applying `transformation_func` to this dataset.
+      Dataset: The `Dataset` returned by applying `transformation_func` to this
+          dataset.
     """
     dataset = transformation_func(self)
     if not isinstance(dataset, Dataset):
