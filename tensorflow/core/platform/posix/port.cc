@@ -67,7 +67,7 @@ int NumSchedulableCPUs() {
   unsigned int count = std::thread::hardware_concurrency();
   if (count > 0) return static_cast<int>(count);
 #endif
-  const int kDefaultCores = 4;  // Semi-conservative guess
+  const int kDefaultCores = 8;  // Semi-conservative guess
   fprintf(stderr, "can't determine number of CPU cores: assuming %d\n",
           kDefaultCores);
   return kDefaultCores;

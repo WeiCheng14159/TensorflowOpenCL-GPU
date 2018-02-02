@@ -21,3 +21,6 @@ adb push ./MNIST_data/train-labels-idx1-ubyte $REMOTE_DIR/MNIST_data/
 adb push mnist_100_cnn.pb $REMOTE_DIR
 adb push mnist_100_mlp.pb $REMOTE_DIR
 adb push mnist_100_dnn.pb $REMOTE_DIR
+
+# Send the overclocking script
+adb push over_clock.sh $REMOTE_DIR
