@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
   string T_input          = "input";
   string T_label          = "output";
   string test_Ops         = "test";
-  string train_Ops        = "train";
+  string train_Ops        = "adam_optimizer/train";
   string dropout_Ops      = "Dropout/Placeholder";
   int32  input_width      = 28;
   int32  input_height     = 28;

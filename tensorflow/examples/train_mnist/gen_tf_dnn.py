@@ -86,7 +86,7 @@ def deepnn(x):
 
   # Dropout - controls the complexity of the model, prevents co-adaptation of
   # features.
-  with tf.name_scope('dropout'):
+  with tf.name_scope('Dropout'):
     keep_prob = tf.placeholder(tf.float32)
     h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 

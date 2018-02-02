@@ -48,7 +48,8 @@ def main(_):
 
   # Define loss and optimizer
   cross_entropy = tf.losses.sparse_softmax_cross_entropy(labels=y, logits=y_out)
-  train_step = tf.train.AdamOptimizer().minimize(cross_entropy, name="train")
+  with tf.name_scope('adam_optimizer'):
+      train_step = tf.train.AdamOptimizer().minimize(cross_entropy, name="train")
 
   correct_prediction = tf.equal(tf.argmax(y_out, 1), y)
   accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name="test")
