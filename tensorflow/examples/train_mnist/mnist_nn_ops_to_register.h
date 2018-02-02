@@ -39,10 +39,12 @@
 "Conv2DOp<CPUDevice, float>",
 "Conv2DCustomBackpropFilterOp<CPUDevice, float>",
 "Conv2DCustomBackpropInputOp<CPUDevice, float>",
+"BinaryOp< CPUDevice, functor::equal_to<float>>",
 "BinaryOp< CPUDevice, functor::equal_to<int64>>",
 "ExpandDimsOp<int32>",
 "FillOp<CPUDevice, float, int32>",
 "UnaryOp< CPUDevice, functor::floor<float>>",
+"BinaryOp< CPUDevice, functor::greater<float>>",
 "BinaryOp< CPUDevice, functor::safe_floor_div<int32>>",
 "IdentityOp",
 "SoftmaxOp<CPUDevice, float>",
@@ -58,17 +60,20 @@
 "PackOp<CPUDevice, ::tensorflow::int32>",
 "PlaceholderOp",
 "ReductionOp<CPUDevice, ::tensorflow::int32, int32, Eigen::internal::ProdReducer<::tensorflow::int32>>",
+"IdentityOp",
 "PhiloxRandomOp<CPUDevice, random::UniformDistribution< random::PhiloxRandom, float>>",
 "BinaryOp< CPUDevice, functor::div<float>>",
 "ReluOp<CPUDevice, float>",
 "ReluGradOp<CPUDevice, float>",
 "ReshapeOp",
 "SummaryScalarOp<float>",
+"SelectOp<CPUDevice, float>",
 "ShapeOp<int32>",
 "ShapeNOp<int32>",
 "SliceOp<CPUDevice, ::tensorflow::int32>",
 "SoftmaxOp<CPUDevice, float>",
 "SoftmaxXentWithLogitsOp<CPUDevice, float>",
+"SparseSoftmaxXentWithLogitsOp<CPUDevice, float, int64>",
 "BinaryOp< CPUDevice, functor::sub<float>>",
 "BinaryOp< CPUDevice, functor::sub<int32>>",
 "ReductionOp<CPUDevice, float, int32, Eigen::internal::SumReducer<float>>",
@@ -89,7 +94,6 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "Assign")
      || isequal(op, "BroadcastGradientArgs")
      || isequal(op, "Cast")
-     || isequal(op, "ConcatV2")
      || isequal(op, "Const")
      || isequal(op, "Conv2D")
      || isequal(op, "Conv2DBackpropFilter")
@@ -99,12 +103,12 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "Fill")
      || isequal(op, "Floor")
      || isequal(op, "FloorDiv")
+     || isequal(op, "Greater")
      || isequal(op, "Identity")
      || isequal(op, "LogSoftmax")
      || isequal(op, "MatMul")
      || isequal(op, "MaxPool")
      || isequal(op, "MaxPoolGrad")
-     || isequal(op, "Maximum")
      || isequal(op, "Mean")
      || isequal(op, "MergeSummary")
      || isequal(op, "Mul")
@@ -113,17 +117,20 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "Pack")
      || isequal(op, "Placeholder")
      || isequal(op, "Prod")
+     || isequal(op, "PreventGradient")
      || isequal(op, "RandomUniform")
      || isequal(op, "RealDiv")
      || isequal(op, "Relu")
      || isequal(op, "ReluGrad")
      || isequal(op, "Reshape")
      || isequal(op, "ScalarSummary")
+     || isequal(op, "Select")
      || isequal(op, "Shape")
      || isequal(op, "ShapeN")
      || isequal(op, "Slice")
      || isequal(op, "Softmax")
      || isequal(op, "SoftmaxCrossEntropyWithLogits")
+     || isequal(op, "SparseSoftmaxCrossEntropyWithLogits")
      || isequal(op, "Sub")
      || isequal(op, "Sum")
      || isequal(op, "Tile")
