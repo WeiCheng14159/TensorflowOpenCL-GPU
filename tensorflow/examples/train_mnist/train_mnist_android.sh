@@ -1,8 +1,11 @@
 #!/bin/bash
 
-bazel build --config=android_arm64 //tensorflow/examples/train_mnist/... \
+bazel build --config=android_arm64 //tensorflow/examples/train_mnist:train_mnist \
     --verbose_failures=true \
     --cxxopt="-ferror-limit=1" \
+    --cxxopt="-std=c++11" \
+    --cxxopt="-DSELECTIVE_REGISTRATION" \
+    --cxxopt="-DSUPPORT_SELECTIVE_REGISTRATION" \
     --jobs=8
 
 REMOTE_DIR='/data/local/tmp'

@@ -20,11 +20,7 @@ cc_binary(
         "main.cc",
     ],
     copts = select({
-      "//tensorflow:android": [
-          "-std=c++11",
-          "-DSELECTIVE_REGISTRATION",
-          "-DSUPPORT_SELECTIVE_REGISTRATION"
-      ],
+      "//tensorflow:android": [],
       "//conditions:default": [],
     }),
     linkopts = select({
