@@ -18,6 +18,8 @@ limitations under the License.
 #define EIGEN_USE_THREADS
 
 #include "tensorflow/core/kernels/matmul_op.h"
+// MatMul op accelerated with OpenCL
+#include "tensorflow/core/kernels/matmul_cl_op.h"
 
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
@@ -515,7 +517,11 @@ struct MatMulFunctor<CPUDevice, T> {
       typename MatMulTypes<T>::in_type in0,
       typename MatMulTypes<T>::in_type in1,
       const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair) {
+  #ifdef TEST_CL
+    MatMulCL<CPUDevice>(d, out, in0, in1, dim_pair);
+  #else
     MatMul<CPUDevice>(d, out, in0, in1, dim_pair);
+  #endif
   }
 };
 

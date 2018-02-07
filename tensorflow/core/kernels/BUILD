@@ -2770,7 +2770,10 @@ tf_kernel_library(
     ] + if_mkl([
         "mkl_matmul_op.cc",
     ]),
-    hdrs = ["matmul_op.h"],
+    hdrs = [
+        "matmul_op.h",
+        "matmul_cl_op.h",
+    ],
     defines = select({
         ":xsmm": [
             "TENSORFLOW_USE_LIBXSMM",
@@ -4648,6 +4651,7 @@ filegroup(
         "immutable_constant_op.h",
         "matmul_op.cc",
         "matmul_op.h",
+        "matmul_cl_op.h",
         "no_op.cc",
         "no_op.h",
         "non_max_suppression_op.cc",
