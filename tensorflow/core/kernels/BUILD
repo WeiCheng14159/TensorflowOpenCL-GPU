@@ -2793,7 +2793,7 @@ tf_kernel_library(
         "@mkl_dnn//:mkl_dnn",
     ]) + if_cuda([
         "//tensorflow/core/platform/default/build_config:cublas_plugin",
-    ]), + [
+    ]) + [
       ":matmul_cl_functor",
     ],
 )
