@@ -18,8 +18,11 @@ limitations under the License.
 #define EIGEN_USE_THREADS
 
 #include "tensorflow/core/kernels/matmul_op.h"
+
 // MatMul op accelerated with OpenCL
-#include "tensorflow/core/kernels/matmul_cl_op.h"
+#ifdef TEST_CL
+  #include "tensorflow/core/kernels/matmul_cl_op.h"
+#endif
 
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
