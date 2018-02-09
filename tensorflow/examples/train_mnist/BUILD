@@ -33,6 +33,7 @@ cc_binary(
             "-z defs",
             "-s",
             "-Wl,--exclude-libs,ALL",
+            "-fuse-ld=gold",
         ],
         "//conditions:default": ["-lm"],
     }),
