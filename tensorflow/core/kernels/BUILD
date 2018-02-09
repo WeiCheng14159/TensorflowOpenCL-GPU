@@ -2767,12 +2767,12 @@ tf_kernel_library(
     name = "matmul_op",
     srcs = [
         "matmul_op.cc",
+        "matmul_cl_op.h",
     ] + if_mkl([
         "mkl_matmul_op.cc",
     ]),
     hdrs = [
         "matmul_op.h",
-        "matmul_cl_op.h",
     ],
     defines = select({
         ":xsmm": [
@@ -2793,7 +2793,30 @@ tf_kernel_library(
         "@mkl_dnn//:mkl_dnn",
     ]) + if_cuda([
         "//tensorflow/core/platform/default/build_config:cublas_plugin",
-    ]),
+    ]), + [
+      ":matmul_cl_functor",
+    ],
+)
+
+cc_library(
+    name = "android_opencl_libs",
+    srcs = [
+        "//external:libopencl_64",
+    ],
+)
+
+cc_library(
+    name = "matmul_cl_functor",
+    hdrs = [
+      "matmul_cl_functor.h",
+    ],
+    srcs = [
+      "matmul_cl_functor.cc",
+    ],
+    deps = LOGGING_DEPS + [
+      ":android_opencl_libs",
+      "//external:libopencl_header",
+    ],
 )
 
 tf_kernel_library(
@@ -4651,6 +4674,8 @@ filegroup(
         "immutable_constant_op.h",
         "matmul_op.cc",
         "matmul_op.h",
+        "matmul_cl_functor.h",
+        "matmul_cl_functor.cc",
         "matmul_cl_op.h",
         "no_op.cc",
         "no_op.h",
@@ -5079,6 +5104,7 @@ cc_library(
         "@fft2d",
         "@gemmlowp",
         "@protobuf_archive//:protobuf",
+        "//external:libopencl_header",
     ],
     alwayslink = 1,
 )
