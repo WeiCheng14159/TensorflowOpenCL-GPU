@@ -6,6 +6,7 @@ bazel build --config=android_arm64 //tensorflow/examples/train_mnist:train_mnist
     --cxxopt="-std=c++11" \
     --cxxopt="-DSELECTIVE_REGISTRATION" \
     --cxxopt="-DSUPPORT_SELECTIVE_REGISTRATION" \
+    --cxxopt="-DTEST_CL" \
     --jobs=8
 
 REMOTE_DIR='/data/local/tmp'
