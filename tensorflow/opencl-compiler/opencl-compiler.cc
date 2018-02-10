@@ -3,6 +3,72 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
+
+using namespace std;
+
+///
+//  Attempt to create the program object from a cached binary.  Note that
+//  on first run this will fail because the binary has not yet been created.
+//
+cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, const char* fileName)
+{
+    FILE *fp = fopen(fileName, "rb");
+    if (fp == NULL)
+    {
+        return NULL;
+    }
+
+    // Determine the size of the binary
+    size_t binarySize;
+    fseek(fp, 0, SEEK_END);
+    binarySize = ftell(fp);
+    rewind(fp);
+
+    unsigned char *programBinary = new unsigned char[binarySize];
+    fread(programBinary, 1, binarySize, fp);
+    fclose(fp);
+
+    cl_int errNum = 0;
+    cl_program program;
+    cl_int binaryStatus;
+
+    program = clCreateProgramWithBinary(context,
+                                        1,
+                                        &device,
+                                        &binarySize,
+                                        (const unsigned char**)&programBinary,
+                                        &binaryStatus,
+                                        &errNum);
+    delete [] programBinary;
+    if (errNum != CL_SUCCESS)
+    {
+        std::cerr << "Error loading program binary." << std::endl;
+        return NULL;
+    }
+
+    if (binaryStatus != CL_SUCCESS)
+    {
+        std::cerr << "Invalid binary for device" << std::endl;
+        return NULL;
+    }
+
+    errNum = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    if (errNum != CL_SUCCESS)
+    {
+        // Determine the reason for the error
+        char buildLog[16384];
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG,
+                              sizeof(buildLog), buildLog, NULL);
+
+        std::cerr << "Error in program: " << std::endl;
+        std::cerr << buildLog << std::endl;
+        clReleaseProgram(program);
+        return NULL;
+    }
+
+    return program;
+}
 
 int read_file(char **output, size_t *size, const char *name) {
   FILE *fp = fopen(name, "rb");
@@ -153,13 +219,13 @@ cl_int write_binaries(cl_program program, unsigned num_devices,
   binaries_size = (size_t *)malloc(binaries_size_alloc_size);
   if (!binaries_size) {
     err = CL_OUT_OF_HOST_MEMORY;
-    goto cleanup;
+    return err;
   }
 
   err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES,
                          binaries_size_alloc_size, binaries_size, NULL);
   if (err != CL_SUCCESS) {
-    goto cleanup;
+    return err;
   }
 
   // Read the binaries
@@ -167,21 +233,21 @@ cl_int write_binaries(cl_program program, unsigned num_devices,
   binaries_ptr = (unsigned char **)malloc(binaries_ptr_alloc_size);
   if (!binaries_ptr) {
     err = CL_OUT_OF_HOST_MEMORY;
-    goto cleanup;
+    return err;
   }
   memset(binaries_ptr, 0, binaries_ptr_alloc_size);
   for (i = 0; i < num_devices; ++i) {
     binaries_ptr[i] = (unsigned char *)malloc(binaries_size[i]);
     if (!binaries_ptr[i]) {
       err = CL_OUT_OF_HOST_MEMORY;
-      goto cleanup;
+      return err;
     }
   }
 
   err = clGetProgramInfo(program, CL_PROGRAM_BINARIES, binaries_ptr_alloc_size,
                          binaries_ptr, NULL);
   if (err != CL_SUCCESS) {
-    goto cleanup;
+    return err;
   }
 
   // Write the binaries to file
@@ -194,16 +260,6 @@ cl_int write_binaries(cl_program program, unsigned num_devices,
     // Write the binary to the output file
     write_file(filename, binaries_ptr[i], binaries_size[i]);
   }
-
-cleanup:
-  // Free the return value buffer
-  if (binaries_ptr) {
-    for (i = 0; i < num_devices; ++i) {
-      free(binaries_ptr[i]);
-    }
-    free(binaries_ptr);
-  }
-  free(binaries_size);
 
   return err;
 }
@@ -227,31 +283,23 @@ cl_int compile_program(cl_uint *num_devices_out, const char *src,
   cl_context ctx = clCreateContext(ctx_properties, num_devices, devices, NULL,
                                    NULL, &err);
   if (err != CL_SUCCESS) {
-    goto cleanup;
+    return err;
   }
 
   // Create program
   cl_program program = clCreateProgramWithSource(ctx, 1, &src, &src_size, &err);
   if (err != CL_SUCCESS) {
-    goto cleanup;
+    return err;
   }
 
   // Compile program
   err = clBuildProgram(program, num_devices, devices, NULL, NULL, NULL);
   if (err != CL_SUCCESS) {
-    goto cleanup_program;
+    return err;
   }
 
   // Write the binaries
   write_binaries(program, num_devices, platform_idx);
-
-cleanup_program:
-  // Free the built program
-  clReleaseProgram(program);
-
-cleanup:
-  // Free the device list
-  free_device_list(devices, num_devices);
 
   return err;
 }
@@ -289,7 +337,7 @@ void compile_all(const char *src, size_t src_size) {
 int main(int argc, char **argv) {
   // Check the command line option
   if (argc < 2) {
-    fprintf(stderr, "USAGE: cl-compile [SOURCE]\n");
+    cerr << "USAGE: cl-compile [SOURCE]\n";
     exit(EXIT_FAILURE);
   }
 
@@ -299,8 +347,7 @@ int main(int argc, char **argv) {
   char *src = NULL;
   size_t src_size = 0;
   if (read_file(&src, &src_size, filename) != 0) {
-    fprintf(stderr, "ERROR: Failed to read: %s\n", filename);
-    exit(EXIT_FAILURE);
+    cerr << "ERROR: Failed to read:" << filename << endl; return -1;
   }
 
   // Compile binaries for each platforms and devices
@@ -308,6 +355,42 @@ int main(int argc, char **argv) {
 
   // Free the source file
   free(src);
+
+  // Get the platform list
+  cl_int err = CL_SUCCESS;
+  cl_platform_id *platforms = NULL;
+  cl_uint num_platforms = 0;
+  if (get_platform_list(&platforms, &num_platforms) != CL_SUCCESS) {
+    cerr << "ERROR: Failed to get_platform_list" << endl; return -1;
+  }
+
+  // Get the device list
+  cl_device_id* devices = NULL;
+  cl_uint num_devices = 0;
+  get_device_list(&devices, &num_devices, platforms[0]);
+
+  // Create a new context
+  cl_context_properties ctx_properties[] = {
+    CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[0], 0
+  };
+
+  cl_context ctx = clCreateContext(ctx_properties, num_devices, devices, NULL,
+                                   NULL, &err);
+  if (err != CL_SUCCESS) {
+    cerr << "fail to create contenxt" << endl; return -1;
+  }
+
+  // Create a new program
+  cl_program prog_from_bin;
+  const char * src_fn = "cl-matmul_0-0.bin";
+
+  // Load the kernel binary
+  prog_from_bin = CreateProgramFromBinary(ctx, *devices, src_fn);
+  if ( !prog_from_bin ){
+    cerr << "Fail to create program" << endl; return -1;
+  }else{
+    cout << "Program created from binary file " << src_fn << endl;
+  }
 
   return 0;
 }

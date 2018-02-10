@@ -22,7 +22,7 @@ cc_library(
 cc_binary(
     name = "opencl-compiler",
     srcs = [
-        "opencl-compiler.c",
+        "opencl-compiler.cc",
     ],
     copts = [
         "-fPIE",
