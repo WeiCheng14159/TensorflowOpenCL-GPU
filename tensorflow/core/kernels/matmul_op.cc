@@ -21,7 +21,7 @@ limitations under the License.
 
 // MatMul op accelerated with OpenCL
 #ifdef TEST_CL
-  #include "tensorflow/core/kernels/matmul_cl_op.h"
+  #include "tensorflow/core/kernels/matmul_cl_functor.h"
 #endif
 
 #include "tensorflow/core/framework/op.h"
@@ -132,9 +132,17 @@ struct LaunchMatMulBase {
     bool was_vector = ExplicitVectorMatrixOptimization<T>(a, b, dim_pair, out);
     if (!was_vector) {
 #endif  // TENSORFLOW_USE_SYCL
+
+#ifdef TEST_CL
+      functor::MatMulCLFunctor<Device, T>()(ctx->eigen_device<Device>(),
+                                          out->matrix<T>(), a.matrix<T>(),
+                                          b.matrix<T>(), dim_pair);
+#else
       functor::MatMulFunctor<Device, T>()(ctx->eigen_device<Device>(),
                                           out->matrix<T>(), a.matrix<T>(),
                                           b.matrix<T>(), dim_pair);
+#endif // TEST_CL
+
 #ifndef TENSORFLOW_USE_SYCL
     }
 #endif  // TENSORFLOW_USE_SYCL
@@ -520,11 +528,7 @@ struct MatMulFunctor<CPUDevice, T> {
       typename MatMulTypes<T>::in_type in0,
       typename MatMulTypes<T>::in_type in1,
       const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair) {
-  #ifdef TEST_CL
-    MatMulCL<CPUDevice>(d, out, in0, in1, dim_pair);
-  #else
     MatMul<CPUDevice>(d, out, in0, in1, dim_pair);
-  #endif
   }
 };
 
