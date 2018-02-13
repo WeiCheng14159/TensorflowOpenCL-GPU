@@ -1,10 +1,18 @@
+#include <sys/time.h>
+
 #include "tensorflow/core/public/session.h"
 #include "tensorflow/core/graph/default_device.h"
+
+// Numbers of times to get an average timing result
+#define NUM_RUNS 10
 
 using namespace tensorflow;
 using namespace std;
 
 int main(int argc, char* argv[]) {
+    // Timers
+    struct timeval tf_start, tf_end;
+    struct timezone dummy;
 
     std::string graph_definition = "matmul.pb";
     Session* session;
@@ -41,11 +49,21 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    // Compute matrix multiplaction result using TF
-    std::vector<Tensor> output;
-    TF_CHECK_OK(session->Run({{"x", Tx}, {"y", Ty}}, {"matmul"}, {}, &outputs)); // Get cost
+    LOG(INFO) << ">>> [TF] Starting " << NUM_RUNS << " TF MatMul runs...";
+    gettimeofday(&tf_start, NULL);
+    double starttime = (double)tf_start.tv_sec + 1.0e-6*((double)tf_start.tv_usec);
+
+    for (int r=0; r<NUM_RUNS; r++) {
+      // Compute matrix multiplaction result using TF
+      TF_CHECK_OK(session->Run({{"x", Tx}, {"y", Ty}}, {"matmul"}, {}, &outputs)); // Get cost
+    }
     auto tf_res = outputs[0].matrix<float>();
     cout << "TF result: \n" << tf_res << endl;
+
+    gettimeofday(&tf_end, NULL);
+    double endtime = (double)tf_end.tv_sec + 1.0e-6*((double)tf_end.tv_usec);
+    double runtime = (endtime - starttime) / (double)NUM_RUNS;
+    LOG(INFO) << ">>> Done: took " << runtime << " seconds per run";
 
     // Compute matrix multiplaction result using Eigen
     auto Tx_mat = Eigen::Map<Eigen::Matrix<
