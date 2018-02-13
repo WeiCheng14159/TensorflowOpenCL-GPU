@@ -842,18 +842,8 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
   )
 
   native.bind(
-      name = "libopencl_32",
-      actual = "@libopencl_archive//:32-bit-version",
-  )
-
-  native.bind(
-      name = "libopencl_64",
-      actual = "@libopencl_archive//:64-bit-version",
-  )
-
-  native.bind(
-      name = "libopencl_header",
-      actual = "@libopencl_archive//:clheader",
+      name = "android_opencl_libs",
+      actual = "@libopencl_archive//:AndroidOpenCL64BitsLibrary",
   )
 
 # Added by Cheng Wei, this is the OpenCL implementation of SYCL 1.2

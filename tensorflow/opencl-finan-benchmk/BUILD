@@ -6,17 +6,6 @@ load(
     "if_android_arm64",
 )
 
-cc_library(
-    name = "android_opencl_libs",
-    srcs = [        
-        "//external:libopencl_64",
-    ],
-    tags = [
-        "manual",
-        "notap",
-    ],
-)
-
 cc_binary(
     name = "opencl-monte-carlo-bench",
     srcs = [
@@ -26,8 +15,8 @@ cc_binary(
         "-ffunction-sections",
         "-fdata-sections",
         "-fPIE",
-        "-pie", 
-        "-fexceptions", 
+        "-pie",
+        "-fexceptions",
     ],
     linkopts = [
         "-fPIE",
@@ -43,15 +32,14 @@ cc_binary(
         "-fuse-ld=gold",
     ],
     includes = [
-        "Monte-Carlo/"    
-    ], 
+        "Monte-Carlo/"
+    ],
     linkstatic = 1,
     tags = [
         "manual",
         "notap",
     ],
     deps = [
-        ":android_opencl_libs",  
-        "//external:libopencl_header",
+        "//external:android_opencl_libs",
     ],
 )

@@ -12,20 +12,23 @@ filegroup(
     name = "32-bit-version",
     srcs = [
         "libOpenCL_32.so",
-    ],  
+    ],
 )
 
 filegroup(
     name = "64-bit-version",
     srcs = [
         "libOpenCL_64.so",
-    ],  
+    ],
 )
 
 cc_library(
-    name = "clheader",
+    name = "AndroidOpenCL64BitsLibrary",
     hdrs = glob([
         "CL/**",
         "*.hpp",
     ]),
+    srcs = [
+        ":64-bit-version",
+    ],
 )

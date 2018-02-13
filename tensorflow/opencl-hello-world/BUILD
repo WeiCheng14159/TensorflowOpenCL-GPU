@@ -1,5 +1,5 @@
 # Description:
-#   OpenCL hello world program for android 
+#   OpenCL hello world program for android
 
 package(default_visibility = ["//visibility:public"])
 
@@ -9,28 +9,17 @@ load(
     "if_android_arm64",
 )
 
-cc_library(
-    name = "android_opencl_libs",
-    srcs = [        
-        "//external:libopencl_64",
-    ],
-    tags = [
-        "manual",
-        "notap",
-    ],
-)
-
 cc_binary(
     name = "opencl-hello-world",
     srcs = [
-        "opencl-hello-world.cc",      
+        "opencl-hello-world.cc",
     ],
     copts = tf_copts() + [
         "-ffunction-sections",
         "-fdata-sections",
         "-fPIE",
-        "-pie", 
-        "-fexceptions", 
+        "-pie",
+        "-fexceptions",
     ],
     includes = [
     ],
@@ -52,8 +41,7 @@ cc_binary(
         "manual",
         "notap",
     ],
-    deps = [        
-        ":android_opencl_libs",            
-        "//external:libopencl_header",
+    deps = [
+        "//external:android_opencl_libs",
     ],
 )
