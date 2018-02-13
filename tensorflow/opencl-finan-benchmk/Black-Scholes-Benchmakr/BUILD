@@ -1,5 +1,5 @@
 # Description:
-#   OpenCL hello world program for android 
+#   OpenCL hello world program for android
 
 package(default_visibility = ["//visibility:public"])
 
@@ -18,19 +18,7 @@ cc_library(
         "*.h",
     ]),
     deps = [
-        ":android_opencl_libs",            
-        "//external:libopencl_header",
-    ],
-)
-
-cc_library(
-    name = "android_opencl_libs",
-    srcs = [        
-        "//external:libopencl_64",
-    ],
-    tags = [
-        "manual",
-        "notap",
+        "//external:android_opencl_libs",
     ],
 )
 
@@ -42,8 +30,8 @@ cc_binary(
         "-ffunction-sections",
         "-fdata-sections",
         "-fPIE",
-        "-pie", 
-        "-fexceptions", 
+        "-pie",
+        "-fexceptions",
     ],
     linkopts = [
         "-fPIE",
@@ -63,9 +51,8 @@ cc_binary(
         "manual",
         "notap",
     ],
-    deps = [        
-        ":android_opencl_libs",            
-        "//external:libopencl_header",
-        ":black_scholes_bench_lib", 
+    deps = [
+        "//external:android_opencl_libs",
+        ":black_scholes_bench_lib",
     ],
 )
