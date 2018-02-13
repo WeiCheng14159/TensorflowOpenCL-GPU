@@ -5,9 +5,6 @@
 #include <string.h>
 #include <iostream>
 
-// Default output file name
-#define OUTPUT_FN "matmul.bin"
-
 using namespace std;
 
 ///
@@ -217,7 +214,7 @@ void free_device_list(cl_device_id *devices, cl_uint num_devices) {
 }
 
 cl_int write_binaries(cl_program program, unsigned num_devices,
-                      cl_uint platform_idx) {
+                      cl_uint platform_idx, const char * outputBinaryName ) {
   unsigned i;
   cl_int err = CL_SUCCESS;
   size_t *binaries_size = NULL;
@@ -261,12 +258,8 @@ cl_int write_binaries(cl_program program, unsigned num_devices,
 
   // Write the binaries to file
   for (i = 0; i < num_devices; ++i) {
-    // Create output file name
-    char filename[128];
-    snprintf(filename, sizeof(filename), OUTPUT_FN);
-
     // Write the binary to the output file
-    write_file(filename, binaries_ptr[i], binaries_size[i]);
+    write_file(outputBinaryName, binaries_ptr[i], binaries_size[i]);
   }
 
   return err;
@@ -274,7 +267,7 @@ cl_int write_binaries(cl_program program, unsigned num_devices,
 
 cl_int compile_program(cl_uint *num_devices_out, const char *src,
                        size_t src_size, cl_platform_id platform,
-                       cl_uint platform_idx) {
+                       cl_uint platform_idx, const char * outputBinaryName ) {
   cl_int err = CL_SUCCESS;
 
   // Get the device list
@@ -307,12 +300,12 @@ cl_int compile_program(cl_uint *num_devices_out, const char *src,
   }
 
   // Write the binaries
-  write_binaries(program, num_devices, platform_idx);
+  write_binaries(program, num_devices, platform_idx, outputBinaryName);
 
   return err;
 }
 
-void compile_all(const char *src, size_t src_size) {
+void compile_all(const char *src, size_t src_size, const char * outputBinaryName ) {
   cl_uint i;
 
   // Get the platform list
@@ -326,7 +319,7 @@ void compile_all(const char *src, size_t src_size) {
   for (i = 0; i < num_platforms; ++i) {
     // Compile for each devices
     cl_uint num_devices = 0;
-    cl_int err = compile_program(&num_devices, src, src_size, platforms[i], i);
+    cl_int err = compile_program(&num_devices, src, src_size, platforms[i], i, outputBinaryName );
 
     // Print the result
     char *platform_name = get_platform_info(platforms[i], CL_PLATFORM_NAME);
@@ -344,12 +337,13 @@ void compile_all(const char *src, size_t src_size) {
 
 int main(int argc, char **argv) {
   // Check the command line option
-  if (argc < 2) {
-    cerr << "USAGE: cl-compile [SOURCE]\n";
+  if (argc < 3) {
+    cerr << "USAGE: opencl-compiler [SOURCE] [OUTPUT NAME]\n";
     exit(EXIT_FAILURE);
   }
 
-  const char *filename = argv[1];
+  const char * filename = argv[1];
+  const char * output_fn = argv[2];
 
   // Read the source file
   char *src = NULL;
@@ -359,7 +353,7 @@ int main(int argc, char **argv) {
   }
 
   // Compile binaries for each platforms and devices
-  compile_all(src, src_size);
+  compile_all(src, src_size, output_fn);
 
   // Free the source file
   free(src);
@@ -384,15 +378,14 @@ int main(int argc, char **argv) {
   }
 
   // Create a new program
-  cl_program prog_from_bin;
-  const char * src_fn = OUTPUT_FN;
+  cl_program cl_progLoadedFromBinary;
 
   // Load the kernel binary
-  prog_from_bin = CreateProgramFromBinary(ctx, *devices, src_fn);
-  if ( !prog_from_bin ){
+  cl_progLoadedFromBinary = CreateProgramFromBinary(ctx, *devices, output_fn);
+  if ( !cl_progLoadedFromBinary ){
     cerr << "Fail to create program" << endl; return -1;
   }else{
-    cout << "Program created from binary file " << src_fn << endl;
+    cout << "Program created from binary file " << output_fn << endl;
   }
 
   return 0;
