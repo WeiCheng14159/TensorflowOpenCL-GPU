@@ -5,12 +5,14 @@
 #include <string.h>
 #include <iostream>
 
+// Default output file name
+#define OUTPUT_FN "matmul.bin"
+
 using namespace std;
 
 ///
-//  Attempt to create the program object from a cached binary.  Note that
-//  on first run this will fail because the binary has not yet been created.
-//
+//  Attempt to create the program object from a cached binary.
+///
 cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, const char* fileName)
 {
     FILE *fp = fopen(fileName, "rb");
@@ -70,6 +72,9 @@ cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, cons
     return program;
 }
 
+///
+// Read in binary files
+///
 int read_file(char **output, size_t *size, const char *name) {
   FILE *fp = fopen(name, "rb");
   if (!fp) {
@@ -91,6 +96,9 @@ int read_file(char **output, size_t *size, const char *name) {
   return 0;
 }
 
+///
+// Write compiled files
+///
 int write_file(const char *name, const unsigned char *content, size_t size) {
   FILE *fp = fopen(name, "wb+");
   if (!fp) {
@@ -101,6 +109,7 @@ int write_file(const char *name, const unsigned char *content, size_t size) {
   return 0;
 }
 
+// OpenCL helper functions
 cl_int get_platform_list(cl_platform_id **platforms_out,
                          cl_uint *num_platforms_out) {
   cl_int err;
@@ -254,8 +263,7 @@ cl_int write_binaries(cl_program program, unsigned num_devices,
   for (i = 0; i < num_devices; ++i) {
     // Create output file name
     char filename[128];
-    snprintf(filename, sizeof(filename), "cl-matmul_%u-%u.bin",
-             (unsigned)platform_idx, (unsigned)i);
+    snprintf(filename, sizeof(filename), OUTPUT_FN);
 
     // Write the binary to the output file
     write_file(filename, binaries_ptr[i], binaries_size[i]);
@@ -364,17 +372,12 @@ int main(int argc, char **argv) {
     cerr << "ERROR: Failed to get_platform_list" << endl; return -1;
   }
 
-  // Get the device list
+  // Get the device list from the first platform
   cl_device_id* devices = NULL;
   cl_uint num_devices = 0;
   get_device_list(&devices, &num_devices, platforms[0]);
 
-  // Create a new context
-  cl_context_properties ctx_properties[] = {
-    CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[0], 0
-  };
-
-  cl_context ctx = clCreateContext(ctx_properties, num_devices, devices, NULL,
+  cl_context ctx = clCreateContext(NULL, num_devices, devices, NULL,
                                    NULL, &err);
   if (err != CL_SUCCESS) {
     cerr << "fail to create contenxt" << endl; return -1;
@@ -382,7 +385,7 @@ int main(int argc, char **argv) {
 
   // Create a new program
   cl_program prog_from_bin;
-  const char * src_fn = "cl-matmul_0-0.bin";
+  const char * src_fn = OUTPUT_FN;
 
   // Load the kernel binary
   prog_from_bin = CreateProgramFromBinary(ctx, *devices, src_fn);
