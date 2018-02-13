@@ -2794,16 +2794,8 @@ tf_kernel_library(
     ]) + if_cuda([
         "//tensorflow/core/platform/default/build_config:cublas_plugin",
     ]) + if_android([
-      ":android_opencl_libs",
-      "//external:libopencl_header",
+      "//external:android_opencl_libs",
     ])
-)
-
-cc_library(
-    name = "android_opencl_libs",
-    srcs = [
-        "//external:libopencl_64",
-    ],
 )
 
 tf_kernel_library(
@@ -5089,8 +5081,7 @@ cc_library(
         "@fft2d",
         "@gemmlowp",
         "@protobuf_archive//:protobuf",
-        "//external:libopencl_header",
-        ":android_opencl_libs",
+        "//external:android_opencl_libs",
     ],
     alwayslink = 1,
 )

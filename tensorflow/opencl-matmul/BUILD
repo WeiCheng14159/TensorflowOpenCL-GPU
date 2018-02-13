@@ -8,13 +8,6 @@ load(
     "tf_copts",
 )
 
-cc_library(
-    name = "android_opencl_libs",
-    srcs = [
-        "//external:libopencl_64",
-    ],
-)
-
 cc_binary(
     name = "opencl-matmul",
     srcs = [
@@ -41,8 +34,7 @@ cc_binary(
         "-fuse-ld=gold",
     ],
     deps = [
-        ":android_opencl_libs",
-        "//external:libopencl_header",
+        "//external:android_opencl_libs",
         "//tensorflow/core:android_tensorflow_lib",
     ],
 )

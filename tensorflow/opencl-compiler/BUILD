@@ -8,17 +8,6 @@ load(
     "tf_copts",
 )
 
-cc_library(
-    name = "android_opencl_libs",
-    srcs = [
-        "//external:libopencl_64",
-    ],
-    tags = [
-        "manual",
-        "notap",
-    ],
-)
-
 cc_binary(
     name = "opencl-compiler",
     srcs = [
@@ -42,7 +31,6 @@ cc_binary(
         "-fuse-ld=gold",
     ],
     deps = [
-        ":android_opencl_libs",
-        "//external:libopencl_header",
+        "//external:android_opencl_libs",
     ],
 )
