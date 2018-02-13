@@ -45,6 +45,7 @@
 "FillOp<CPUDevice, float, int32>",
 "UnaryOp< CPUDevice, functor::floor<float>>",
 "BinaryOp< CPUDevice, functor::greater<float>>",
+"SummaryHistoOp<float>",
 "BinaryOp< CPUDevice, functor::safe_floor_div<int32>>",
 "IdentityOp",
 "SoftmaxOp<CPUDevice, float>",
@@ -104,6 +105,7 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "Floor")
      || isequal(op, "FloorDiv")
      || isequal(op, "Greater")
+     || isequal(op, "HistogramSummary")
      || isequal(op, "Identity")
      || isequal(op, "LogSoftmax")
      || isequal(op, "MatMul")

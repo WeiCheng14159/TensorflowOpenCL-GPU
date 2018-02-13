@@ -19,6 +19,11 @@ limitations under the License.
 
 #include "tensorflow/core/kernels/matmul_op.h"
 
+// MatMul op accelerated with OpenCL
+#ifdef TEST_CL
+  #include "tensorflow/core/kernels/matmul_cl_functor.h"
+#endif
+
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/register_types.h"
@@ -127,9 +132,17 @@ struct LaunchMatMulBase {
     bool was_vector = ExplicitVectorMatrixOptimization<T>(a, b, dim_pair, out);
     if (!was_vector) {
 #endif  // TENSORFLOW_USE_SYCL
+
+#ifdef TEST_CL
+      functor::MatMulCLFunctor<Device, T>()(ctx->eigen_device<Device>(),
+                                          out->matrix<T>(), a.matrix<T>(),
+                                          b.matrix<T>(), dim_pair);
+#else
       functor::MatMulFunctor<Device, T>()(ctx->eigen_device<Device>(),
                                           out->matrix<T>(), a.matrix<T>(),
                                           b.matrix<T>(), dim_pair);
+#endif // TEST_CL
+
 #ifndef TENSORFLOW_USE_SYCL
     }
 #endif  // TENSORFLOW_USE_SYCL
