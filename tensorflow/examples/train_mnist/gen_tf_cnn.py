@@ -127,7 +127,7 @@ def main(_):
         x: mnist.test.images, y: mnist.test.labels, keep_prob: 1.0}, session=sess))
     tf.train.write_graph(sess.graph_def,
                         './',
-                        'mnist_100_cnn.pb', as_text=False)
+                        'mnist_cnn.pb', as_text=False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
