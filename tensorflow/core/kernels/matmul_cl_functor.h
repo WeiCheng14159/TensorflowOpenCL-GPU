@@ -28,7 +28,7 @@ namespace tensorflow {
         const size_t N = in1.dimension(1);
         const size_t in0_size = sizeof(T) * M * K;
         const size_t in1_size = sizeof(T) * K * N;
-        const size_t out_size = sizeof(T) * M * K;
+        const size_t out_size = sizeof(T) * M * N;
 
         cl_int err = CL_SUCCESS;
 
