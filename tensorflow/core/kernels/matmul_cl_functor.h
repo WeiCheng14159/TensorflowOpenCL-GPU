@@ -107,6 +107,17 @@ namespace tensorflow {
         LOG(INFO) << "out = [" << M << "," << N  << "]";
         LOG(INFO) << endl << out;
 
+        // Free the OpenCL memory objects
+        clReleaseMemObject(a);
+        clReleaseMemObject(b);
+        clReleaseMemObject(c);
+
+        // Clean-up OpenCL
+        clReleaseCommandQueue(clQueue);
+        clReleaseContext(clCtx);
+        clReleaseProgram(clProgram);
+        clReleaseKernel(clKernel);
+
       }
 
     private:
