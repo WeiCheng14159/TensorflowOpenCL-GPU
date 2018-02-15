@@ -327,6 +327,10 @@ void compile_all(const char *src, size_t src_size, const char * outputBinaryName
            (platform_name ? platform_name : ""),
            ((err == CL_SUCCESS) ? "SUCCESS" : "FAILURE"),
            (unsigned)num_devices);
+    if( err ){
+      cerr << "Fail to compile" << endl;
+      exit(-1);
+    }
     fflush(stdout);
     free(platform_name);
   }
