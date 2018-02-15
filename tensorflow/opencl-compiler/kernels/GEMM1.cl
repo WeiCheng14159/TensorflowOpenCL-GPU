@@ -3,7 +3,7 @@
 This kernel computes C = A * B where * means matrix multiplication
 A has size (M, N)
 B has size (N, K)
-C has size (M, K)
+C has size (M, N)
 */
 __kernel void GEMM1(const int M, const int N, const int K,
                       const __global float* A,
