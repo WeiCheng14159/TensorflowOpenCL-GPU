@@ -295,6 +295,4 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "Overall testing accuracy " << 100 * accumulate(
     avg_accu.begin(), avg_accu.end(), 0.0f) / (int)(dataset.test_images.size() / batch_size);
 
-  printf("All registered ops:\n%s\n",
-         tensorflow::OpRegistry::Global()->DebugString(true).c_str());
 } // End of main
