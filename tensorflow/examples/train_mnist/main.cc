@@ -267,6 +267,9 @@ int main(int argc, char* argv[]) {
 
     // Output Tensor ( a vector list of Tensors )
     vector<Tensor> outputs;
+
+    // No drop out layer when testing 
+    drop_prob[0] = 1.0f;
     // Copy drop out probability to TF Tensor
     copy_n( drop_prob.begin(), drop_prob.size(), dropout_prob_tensor.flat<float>().data() );
 
