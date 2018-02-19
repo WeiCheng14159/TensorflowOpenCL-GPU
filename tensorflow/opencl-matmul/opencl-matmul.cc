@@ -1,4 +1,5 @@
 #include <sys/time.h>
+#include <time.h>
 
 #include "tensorflow/core/public/session.h"
 #include "tensorflow/core/graph/default_device.h"
@@ -11,8 +12,7 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
     // Timers
-    struct timeval tf_start, tf_end;
-    struct timezone dummy;
+    struct timeval start, end;
 
     std::string graph_definition = "matmul.pb";
     Session* session;
@@ -50,8 +50,7 @@ int main(int argc, char* argv[]) {
     }
 
     LOG(INFO) << ">>> [TF] Starting " << NUM_RUNS << " TF MatMul runs...";
-    gettimeofday(&tf_start, NULL);
-    double starttime = (double)tf_start.tv_sec + 1.0e-6*((double)tf_start.tv_usec);
+    gettimeofday(&start, NULL);
 
     for (int r=0; r<NUM_RUNS; r++) {
       // Compute matrix multiplaction result using TF
@@ -60,10 +59,11 @@ int main(int argc, char* argv[]) {
     auto tf_res = outputs[0].matrix<float>();
     cout << "TF result: \n" << tf_res << endl;
 
-    gettimeofday(&tf_end, NULL);
-    double endtime = (double)tf_end.tv_sec + 1.0e-6*((double)tf_end.tv_usec);
-    double runtime = (endtime - starttime) / (double)NUM_RUNS;
-    LOG(INFO) << ">>> Done: took " << runtime << " seconds per run";
+    gettimeofday(&end, NULL);
+    double interval = ( end.tv_sec * 1.0e6 + end.tv_usec ) -
+      ( start.tv_sec * 1.0e6 + start.tv_usec );
+    double runtime = interval / NUM_RUNS;
+    LOG(INFO) << ">>> Done: took " << runtime << " us per run";
 
     // Compute matrix multiplaction result using Eigen
     auto Tx_mat = Eigen::Map<Eigen::Matrix<
@@ -82,9 +82,27 @@ int main(int argc, char* argv[]) {
                                   Ty.flat<float>().data(),  /* ptr to data */
                                   Ty.dim_size(0),           /* num_rows */
                                   Ty.dim_size(1)            /* num_cols */);
-
-    auto eigen_res = Tx_mat * Ty_mat;
     cout << "Eigen result: \n" << eigen_res << endl ;
+    auto eigen_res = Eigen::Map<Eigen::Matrix<
+                            float,           /* scalar element type */
+                            Eigen::Dynamic,  /* num_rows is a run-time value */
+                            Eigen::Dynamic,  /* num_cols is a run-time value */
+                            Eigen::RowMajor  /* tensorflow::Tensor is always row-major */>>(
+                              Tx.flat<float>().data(),  /* ptr to data */
+                              Tx.dim_size(0),           /* num_rows */
+                              Ty.dim_size(1)            /* num_cols */);
+
+    LOG(INFO) << ">>> [Eigen] Starting " << NUM_RUNS << " Eigen MatMul runs...";
+    gettimeofday(&start, NULL);
+
+    eigen_res = Tx_mat * Ty_mat;
+    // cout << "Eigen result: \n" << eigen_res << endl ;
+
+    gettimeofday(&end, NULL);
+    interval = ( end.tv_sec * 1.0e6 + end.tv_usec ) -
+      ( start.tv_sec * 1.0e6 + start.tv_usec );
+    runtime = interval;
+    LOG(INFO) << ">>> Done: took " << runtime << " us per run";
 
     cout << "Checking results ...\n";
     for( auto row = 0 ; row < Tx.dim_size(0) ; row ++ )
