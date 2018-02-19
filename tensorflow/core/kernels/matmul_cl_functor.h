@@ -121,7 +121,7 @@ namespace tensorflow {
       }
 
     private:
-      std::string clKernelFuncName = "GEMM1";
+      std::string clKernelFuncName = "GEMM";
       std::string clKernelBinName = "matmul.bin";
 
       // This function reads the compiled cl kernel binary
