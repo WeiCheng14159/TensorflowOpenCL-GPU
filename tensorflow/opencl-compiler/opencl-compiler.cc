@@ -295,8 +295,17 @@ cl_int compile_program(cl_uint *num_devices_out, const char *src,
 
   // Compile program
   err = clBuildProgram(program, num_devices, devices, NULL, NULL, NULL);
-  if (err != CL_SUCCESS) {
-    return err;
+  if (err != CL_SUCCESS)
+  {
+      // Determine the reason for the error
+      char buildLog[16384];
+      clGetProgramBuildInfo(program, devices[0], CL_PROGRAM_BUILD_LOG,
+                            sizeof(buildLog), buildLog, NULL);
+
+      std::cerr << "Error in program: " << std::endl;
+      std::cerr << buildLog << std::endl;
+
+      return err;
   }
 
   // Write the binaries
@@ -328,7 +337,7 @@ void compile_all(const char *src, size_t src_size, const char * outputBinaryName
            ((err == CL_SUCCESS) ? "SUCCESS" : "FAILURE"),
            (unsigned)num_devices);
     if( err ){
-      cerr << "Fail to compile" << endl;
+      cerr << "[Error code]" << err << endl;
       exit(-1);
     }
     fflush(stdout);
