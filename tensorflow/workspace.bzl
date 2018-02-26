@@ -846,6 +846,38 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       actual = "@libopencl_archive//:AndroidOpenCL64BitsLibrary",
   )
 
+  # Added by Cheng Wei, an OpenCL BLAS (Basic Linear Algebra Library)
+  native.new_http_archive(
+      name = "clblast_archive",
+      urls = [
+           "https://github.com/supernovaremnant/CLBlast/archive/7e165d06cd9a2864fc55594ef9dd45ca56cdf705.tar.gz",
+      ],
+      sha256 = "cf97a75e9df3381aa3fc70d8840bcb2fe19ef7ffa1d279a068b95e587b07c86c",
+      strip_prefix = "CLBlast-7e165d06cd9a2864fc55594ef9dd45ca56cdf705",
+      build_file = str(Label("//third_party:libCLBlast.BUILD")),
+  )
+
+  native.bind(
+      name = "openclBLAS_libs",
+      actual = "@clblast_archive//:clblast_libs",
+  )
+
+  # Added by Cheng Wei, an OpenCL BLAS (Basic Linear Algebra Library) tuned for Adreno 540 GPU
+  native.new_http_archive(
+      name = "clblast_adreno540_branch_archive",
+      urls = [
+           "https://github.com/supernovaremnant/CLBlast/archive/e6f639c945fa7d700bb558706bed8dfc8b1c575f.tar.gz",
+      ],
+      sha256 = "727d3765907c325c265734e086a32808f69ef376e815d46c66d3fd98aae548f5",
+      strip_prefix = "CLBlast-e6f639c945fa7d700bb558706bed8dfc8b1c575f",
+      build_file = str(Label("//third_party:libCLBlast.BUILD")),
+  )
+
+  native.bind(
+      name = "openclBLAS_libs_for_Adreno540",
+      actual = "@clblast_adreno540_branch_archive//:clblast_libs",
+  )
+
 # Added by Cheng Wei, this is the OpenCL implementation of SYCL 1.2
 # running on Adreno 540 GPU
 
