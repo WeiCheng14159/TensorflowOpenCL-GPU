@@ -27,21 +27,20 @@ int main(int argc, char* argv[]) {
     // Load graph into session
     TF_CHECK_OK(session->Create(graph_def));
 
-    int bat = atoi( argv[1] );
-    const int feat_size = 784;
-    Tensor Tx (DT_FLOAT, TensorShape({bat       ,feat_size }));
-    Tensor Ty (DT_FLOAT, TensorShape({feat_size ,10       }));
+    int N = atoi( argv[1] );
+    Tensor Tx (DT_FLOAT, TensorShape({N ,N}));
+    Tensor Ty (DT_FLOAT, TensorShape({N ,N}));
 
     // Matrix initializaiotn
     auto Tx_map = Tx.tensor<float, 2>();
-    for( int i = 0 ; i < bat ; i ++ ){
-      for( auto j = 0 ; j < feat_size ; j ++ ){
+    for( int i = 0 ; i < N ; i ++ ){
+      for( auto j = 0 ; j < N ; j ++ ){
         Tx_map(i, j) = (i==j) ? 1 : 0;
       }
     }
     auto Ty_map = Ty.tensor<float, 2>();
-    for( int i = 0 ; i < feat_size ; i ++ ){
-      for( auto j = 0 ; j < 10 ; j ++ ){
+    for( int i = 0 ; i < N ; i ++ ){
+      for( auto j = 0 ; j < N ; j ++ ){
         Ty_map(i, j) = (i!=j) ? 1 : 0;
       }
     }
@@ -55,7 +54,7 @@ int main(int argc, char* argv[]) {
       TF_CHECK_OK(session->Run({{"x", Tx}, {"y", Ty}}, {"matmul"}, {}, &outputs)); // Get cost
     }
     auto tf_res = outputs[0].matrix<float>();
-    cout << "TF result: \n" << tf_res << endl;
+    // cout << "TF result: \n" << tf_res << endl;
 
     auto elapsed_time = std::chrono::steady_clock::now() - start_time;
     auto runtime = std::chrono::duration<double,std::micro>(elapsed_time).count() / NUM_RUNS;
@@ -75,10 +74,10 @@ int main(int argc, char* argv[]) {
                               Eigen::Dynamic,  /* num_rows is a run-time value */
                               Eigen::Dynamic,  /* num_cols is a run-time value */
                               Eigen::RowMajor  /* tensorflow::Tensor is always row-major */>>(
-                                  Ty.flat<float>().data(),  /* ptr to data */
-                                  Ty.dim_size(0),           /* num_rows */
-                                  Ty.dim_size(1)            /* num_cols */);
-    cout << "Eigen result: \n" << eigen_res << endl ;
+                                Ty.flat<float>().data(),  /* ptr to data */
+                                Ty.dim_size(0),           /* num_rows */
+                                Ty.dim_size(1)            /* num_cols */);
+
     auto eigen_res = Eigen::Map<Eigen::Matrix<
                             float,           /* scalar element type */
                             Eigen::Dynamic,  /* num_rows is a run-time value */
