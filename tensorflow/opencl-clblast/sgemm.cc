@@ -44,9 +44,9 @@ int main(void) {
     const size_t device_id = 0;
 
     // Example SGEMM arguments
-    const size_t m = 16;
-    const size_t n = 16;
-    const size_t k = 16;
+    const size_t m = size;
+    const size_t n = size;
+    const size_t k = size;
     const float alpha = 0.7f;
     const float beta = 1.0f;
     const size_t a_ld = k;
