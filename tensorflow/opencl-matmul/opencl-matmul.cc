@@ -1,5 +1,4 @@
-#include <sys/time.h>
-#include <time.h>
+#include <chrono>
 
 #include "tensorflow/core/public/session.h"
 #include "tensorflow/core/graph/default_device.h"
@@ -11,8 +10,6 @@ using namespace tensorflow;
 using namespace std;
 
 int main(int argc, char* argv[]) {
-    // Timers
-    struct timeval start, end;
 
     std::string graph_definition = "matmul.pb";
     Session* session;
@@ -49,8 +46,9 @@ int main(int argc, char* argv[]) {
       }
     }
 
+    // Start the timer
     LOG(INFO) << ">>> [TF] Starting " << NUM_RUNS << " TF MatMul runs...";
-    gettimeofday(&start, NULL);
+    auto start_time = std::chrono::steady_clock::now();
 
     for (int r=0; r<NUM_RUNS; r++) {
       // Compute matrix multiplaction result using TF
@@ -59,10 +57,8 @@ int main(int argc, char* argv[]) {
     auto tf_res = outputs[0].matrix<float>();
     cout << "TF result: \n" << tf_res << endl;
 
-    gettimeofday(&end, NULL);
-    double interval = ( end.tv_sec * 1.0e6 + end.tv_usec ) -
-      ( start.tv_sec * 1.0e6 + start.tv_usec );
-    double runtime = interval / NUM_RUNS;
+    auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+    auto runtime = std::chrono::duration<double,std::micro>(elapsed_time).count() / NUM_RUNS;
     LOG(INFO) << ">>> Done: took " << runtime << " us per run";
 
     // Compute matrix multiplaction result using Eigen
@@ -92,16 +88,15 @@ int main(int argc, char* argv[]) {
                               Tx.dim_size(0),           /* num_rows */
                               Ty.dim_size(1)            /* num_cols */);
 
+    // Start the timer
+    start_time = std::chrono::steady_clock::now();
     LOG(INFO) << ">>> [Eigen] Starting " << NUM_RUNS << " Eigen MatMul runs...";
-    gettimeofday(&start, NULL);
 
     eigen_res = Tx_mat * Ty_mat;
     // cout << "Eigen result: \n" << eigen_res << endl ;
 
-    gettimeofday(&end, NULL);
-    interval = ( end.tv_sec * 1.0e6 + end.tv_usec ) -
-      ( start.tv_sec * 1.0e6 + start.tv_usec );
-    runtime = interval;
+    elapsed_time = std::chrono::steady_clock::now() - start_time;
+    runtime = std::chrono::duration<double,std::micro>(elapsed_time).count() / NUM_RUNS;
     LOG(INFO) << ">>> Done: took " << runtime << " us per run";
 
     cout << "Checking results ...\n";
