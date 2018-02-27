@@ -9,7 +9,10 @@
 #include "tensorflow/core/lib/hash/hash.h"
 #include "tensorflow/core/platform/logging.h"
 
-#include "CL/cl.h"
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS // to disable deprecation warnings
+
+// Includes the CLBlast library (C interface)
+#include "clblast_c.h"
 
 using namespace std;
 
@@ -39,34 +42,16 @@ namespace tensorflow {
         cl_device_id device;
         err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
 
-        const cl_context_properties prop[] = {
-          CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
-          0
-        };
-
         // Create context
-        cl_context clCtx = clCreateContext(prop, 1, &device, NULL, NULL, &err);
-
-        // Create program
-        unsigned char* clKernelBinaryFile = NULL;
-        size_t clKernelBinSize = 0;
-        // Read compiled binary
-        read_file(&clKernelBinaryFile, &clKernelBinSize, clKernelBinName.c_str() );
-
-        cl_program clProgram =
-          clCreateProgramWithBinary(clCtx, 1, &device, &clKernelBinSize,
-                                    (const unsigned char **)&clKernelBinaryFile,
-                                    NULL, &err);
-
-        err = clBuildProgram(clProgram, 1, &device, NULL, NULL, NULL);
-
-        // Allocate memory buffers
-        cl_mem a = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in0_size, NULL, &err);
-        cl_mem b = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in1_size, NULL, &err);
-        cl_mem c = clCreateBuffer(clCtx, CL_MEM_WRITE_ONLY, out_size, NULL, &err);
+        cl_context clCtx = clCreateContext(NULL, 1, &device, NULL, NULL, NULL);
 
         // Create command clQueue
         cl_command_queue clQueue = clCreateCommandQueue(clCtx, device, 0, NULL);
+
+        // Allocate memory buffers
+        cl_mem a = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in0_size, NULL, NULL);
+        cl_mem b = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in1_size, NULL, NULL);
+        cl_mem c = clCreateBuffer(clCtx, CL_MEM_WRITE_ONLY, out_size, NULL, NULL);
 
         // Enqueue write buffer commands
         cl_event writeBuffer_events[2];
@@ -75,37 +60,37 @@ namespace tensorflow {
         err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size,
                                   in1.data(), 0, NULL, &writeBuffer_events[1]);
 
-        // Enqueue the kernel execution command
-        cl_kernel clKernel = clCreateKernel(clProgram, clKernelFuncName.c_str() , &err);
-        err = clSetKernelArg(clKernel, 0, sizeof(int), &M);
-        err = clSetKernelArg(clKernel, 1, sizeof(int), &N);
-        err = clSetKernelArg(clKernel, 2, sizeof(int), &K);
-        err = clSetKernelArg(clKernel, 3, sizeof(cl_mem), &a);
-        err = clSetKernelArg(clKernel, 4, sizeof(cl_mem), &b);
-        err = clSetKernelArg(clKernel, 5, sizeof(cl_mem), &c);
+        // Wait for completion
+        clWaitForEvents(2, writeBuffer_events);
 
-        const int TS = 32;
-        const size_t local[2] = { TS, TS };
-        const size_t global[2] = { M, N };
-        cl_event kernel_event;
-        err = clEnqueueNDRangeKernel(clQueue, clKernel, 2, NULL,
-                                     global, local, 2, writeBuffer_events, &kernel_event);
+        const T alpha = 1.0f;
+        const T beta = 0.0f;
+        const size_t a_ld = M;
+        const size_t b_ld = K;
+        const size_t c_ld = M;
 
-        // Enqueue the read buffer command
-        err = clEnqueueReadBuffer(clQueue, c, CL_TRUE, 0, out_size, out.data(),
-                                  1, &kernel_event, NULL);
+        // Create kernel_event
+        cl_event kernel_event = NULL;
 
-        // Wait until every commands are finished
-        err = clFinish(clQueue);
-        if ( err != CL_SUCCESS )
-          LOG(ERROR) << "Fail";
+        // Call the SGEMM routine.
+        CLBlastStatusCode status = CLBlastSgemm(CLBlastLayoutRowMajor,
+                                                CLBlastTransposeNo, CLBlastTransposeNo,
+                                                M, N, K,
+                                                alpha,
+                                                a, 0, a_ld,
+                                                b, 0, b_ld,
+                                                beta,
+                                                c, 0, c_ld,
+                                                &clQueue, &kernel_event);
 
-        LOG(INFO) << "in0 = [" << M << "," << K  << "]";
-        LOG(INFO) << endl << in0;
-        LOG(INFO) << "in1 = [" << K << "," << N  << "]";
-        LOG(INFO) << endl << in1;
-        LOG(INFO) << "out = [" << M << "," << N  << "]";
-        LOG(INFO) << endl << out;
+        // Wait for completion
+        if (status != CLBlastSuccess){
+          LOG(ERROR) << "[CLBlast] Fail with code " << status;
+          return;
+        }
+
+        // Read results
+        clEnqueueReadBuffer(clQueue, c, CL_TRUE, 0, out_size, out.data(), 1, &kernel_event, NULL);
 
         // Free the OpenCL memory objects
         clReleaseMemObject(a);
@@ -115,35 +100,16 @@ namespace tensorflow {
         // Clean-up OpenCL
         clReleaseCommandQueue(clQueue);
         clReleaseContext(clCtx);
-        clReleaseProgram(clProgram);
-        clReleaseKernel(clKernel);
+        clReleaseEvent(kernel_event);
+        clReleaseEvent(writeBuffer_events[0]);
+        clReleaseEvent(writeBuffer_events[1]);
 
-      }
-
-    private:
-      std::string clKernelFuncName = "GEMM";
-      std::string clKernelBinName = "matmul.bin";
-
-      // This function reads the compiled cl kernel binary
-      int read_file(unsigned char **output, size_t *size, const char *name) {
-        FILE* fp = fopen(name, "rb");
-        if (!fp) {
-          LOG(ERROR) << "Fail to read cl kernel binary " << std::string( name );
-        }
-
-        fseek(fp, 0, SEEK_END);
-        *size = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-
-        *output = (unsigned char *)malloc(*size);
-        if (!*output) {
-          fclose(fp);
-          return -1;
-        }
-
-        fread(*output, *size, 1, fp);
-        fclose(fp);
-        return 0;
+        // LOG(INFO) << "in0 = [" << M << "," << K  << "]";
+        // LOG(INFO) << endl << in0;
+        // LOG(INFO) << "in1 = [" << K << "," << N  << "]";
+        // LOG(INFO) << endl << in1;
+        // LOG(INFO) << "out = [" << M << "," << N  << "]";
+        // LOG(INFO) << endl << out;
       }
   };  // class ClComputer
 
