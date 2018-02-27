@@ -13,7 +13,10 @@ filegroup(
     srcs = glob([
       "src/**/*.cpp",
     ], exclude = [
-      "src/clblast_cuda.cpp", 
+      "src/clblast_cuda.cpp",
+      "src/pyblast/**",
+      "src/tuning/**",
+      "test/**",
     ] ),
 )
 
