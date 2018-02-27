@@ -98,7 +98,7 @@ int main() {
   queue.enqueueWriteBuffer(device_c, CL_TRUE, 0, host_c.size()*sizeof(float), host_c.data());
 
   // Start the timer
-  auto start_time = std::chrono::steady_clock::now();
+  auto start_time = std::chrono::high_resolution_clock::now();
 
   // Calls the routine. Note that the type of alphas and betas (float) determine the precision.
   auto queue_plain = queue();
@@ -118,11 +118,11 @@ int main() {
     clWaitForEvents(1, &event);
     clReleaseEvent(event);
   }
-  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
-  auto time_ms = std::chrono::duration<double,std::milli>(elapsed_time).count();
+  auto elapsed_time = std::chrono::high_resolution_clock::now() - start_time;
+  auto time_ms = std::chrono::duration<double,std::micro>(elapsed_time).count();
 
   // Example completed. See "clblast.h" for status codes (0 -> success).
-  printf("Completed batched SGEMM in %.3lf ms with status %d\n", time_ms, static_cast<int>(status));
+  printf("Completed batched SGEMM in %.0lf us with status %d\n", time_ms, static_cast<int>(status));
   return 0;
 }
 

@@ -62,7 +62,7 @@ int main(void) {
     for (size_t i=0; i<m*n; ++i) { host_c[i] = 0.0f; }
 
     // Start the timer
-    auto start_time = std::chrono::steady_clock::now();
+    auto start_time = std::chrono::high_resolution_clock::now();
 
     for (int r=0; r<NUM_RUNS; r++) {
 
@@ -123,10 +123,10 @@ int main(void) {
       if( static_cast<int>(status) != 0 ){ return -1; }
     }
 
-    auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+    auto elapsed_time = std::chrono::high_resolution_clock::now() - start_time;
     auto time_ms = std::chrono::duration<double,std::micro>(elapsed_time).count() / NUM_RUNS;
 
-    printf("Completed HGEMM of size %d in %.1lf us\n", size, time_ms);
+    printf("Completed HGEMM of size %d in %.0lf us\n", size, time_ms);
 
     // Clean up
     free(host_a);
