@@ -1,8 +1,8 @@
 import tensorflow as tf
 
 with tf.Session() as sess:
-    x = tf.placeholder(tf.float32, [None, 784], name="x")
-    y = tf.placeholder(tf.float32, [784 , None], name="y")
+    x = tf.placeholder(tf.float32, [None, 1024], name="x")
+    y = tf.placeholder(tf.float32, [1024 , None], name="y")
 
     result = tf.matmul(x, y, name="matmul")
 
