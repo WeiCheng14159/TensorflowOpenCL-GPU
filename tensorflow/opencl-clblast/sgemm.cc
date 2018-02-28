@@ -30,7 +30,7 @@
 // Numbers of times to get an average timing result
 #define NUM_RUNS 10
 // GEMM matrix size
-int mat_size[] = {16, 32, 64, 128, 256, 512, 1024, 2048};
+int mat_size[] = {8, 16, 32, 64, 128, 256, 512, 1024, 2048};
 
 // =================================================================================================
 
