@@ -24,44 +24,35 @@ filegroup(
     visibility = ["//tensorflow:__subpackages__"],
 )
 
+ANDROID_C_OPTS = tf_copts() + [
+  "-ffunction-sections",
+  "-fdata-sections",
+  "-fPIE",
+  "-pie",
+  "-fexceptions",
+]
 
-# Build the native .so.
-# bazel build //tensorflow/contrib/android:libtensorflow_inference.so \
-#   --crosstool_top=//external:android/crosstool \
-#   --host_crosstool_top=@bazel_tools//tools/cpp:toolchain \
-#   --cpu=armeabi-v7a
+ANDROID_LINK_OPTS = [
+  "-fPIE",
+  "-pie",
+  "-landroid",
+  "-latomic",
+  "-ldl",
+  "-llog",
+  "-lm",
+  "-z defs",
+  "-s",
+  "-Wl,--gc-sections",
+  "-fuse-ld=gold",
+]
 
 cc_binary(
     name = "cpu-mlp-trainer",
     srcs = ["cpu-mlp-trainer.cc"],
-    copts = tf_copts() + [
-        "-ffunction-sections",
-        "-fdata-sections",
-        "-fPIE",
-        "-pie", 
-    ],
-    linkopts = [
-        "-fPIE",
-        "-pie",
-        "-landroid",
-        "-latomic",
-        "-ldl",
-        "-llog",
-        "-lm",
-        "-z defs",
-        "-s",
-        "-Wl,--gc-sections",
-        "-Wl,--version-script",
-        "//tensorflow/c:version_script.lds",
-    ],
-    linkstatic = 1,
-    tags = [
-        "manual",
-        "notap",
-    ],
+    copts = ANDROID_C_OPTS,
+    linkopts = ANDROID_LINK_OPTS,
     deps = [
-        "//tensorflow/c:c_api",
+        "//external:android_opencl_libs",
         "//tensorflow/core:android_tensorflow_lib",
-        "//tensorflow/c:version_script.lds",
     ],
 )
