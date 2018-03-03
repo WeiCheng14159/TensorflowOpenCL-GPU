@@ -829,21 +829,24 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       actual = "@libmnist_reader//:lib",
   )
 
-# Added by Cheng Wei, this is OpenCL driver for Xiaomi 6 running Android
+# Added by Cheng Wei, this is OpenCL driver Android (Qualcomm Adreno 540 GPU & ARM Mali T880 GPU)
 
   native.new_http_archive(
       name = "libopencl_archive",
       urls = [
-           "https://github.com/supernovaremnant/Android-OpenCL-Driver/archive/63c6328962c16d534aa07ac865e5156d349fd208.tar.gz",
+           "https://github.com/supernovaremnant/Android-OpenCL-Driver/archive/dba95462c5fbd116e93254f349ba91f15c81d6d3.tar.gz",
       ],
-      sha256 = "665a75b3dd418edf5b2e2657dcb0e74d27093e6fe4cd4a0c2e1078b4c95993f2",
-      strip_prefix = "Android-OpenCL-Driver-63c6328962c16d534aa07ac865e5156d349fd208",
+      sha256 = "6b68c6850a32ba98dd24c235468727ac974d8acca602ea8b059d9b07b03e2e78",
+      strip_prefix = "Android-OpenCL-Driver-dba95462c5fbd116e93254f349ba91f15c81d6d3",
       build_file = str(Label("//third_party:libopencl.BUILD")),
   )
 
   native.bind(
       name = "android_opencl_libs",
-      actual = "@libopencl_archive//:AndroidOpenCL64BitsLibrary",
+      # For Adreno 540 GPU
+      actual = "@libopencl_archive//:Qualcomm_Adreno_540_android_opencl_64_bit_lib",
+      # For Mali T880 GPU
+      # actual = "@libopencl_archive//:ARM_Mali_T880_android_opencl_64_bit_lib",
   )
 
   # Added by Cheng Wei, an OpenCL BLAS (Basic Linear Algebra Library)
