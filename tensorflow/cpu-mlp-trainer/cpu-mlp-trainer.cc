@@ -29,8 +29,8 @@ int main(int argc, char* argv[]) {
     // Initialize our variables
     TF_CHECK_OK(session->Run({}, {}, {"init_all_vars_op"}, nullptr));
 
-    Tensor x(DT_FLOAT, TensorShape({100, 32}));
-    Tensor y(DT_FLOAT, TensorShape({100, 8}));
+    Tensor x(DT_FLOAT, TensorShape({10, 5}));
+    Tensor y(DT_FLOAT, TensorShape({10, 5}));
     auto _XTensor = x.matrix<float>();
     auto _YTensor = y.matrix<float>();
 
