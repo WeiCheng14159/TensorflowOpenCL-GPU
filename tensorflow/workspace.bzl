@@ -834,10 +834,10 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
   native.new_http_archive(
       name = "libopencl_archive",
       urls = [
-           "https://github.com/supernovaremnant/Android-OpenCL-Driver/archive/dba95462c5fbd116e93254f349ba91f15c81d6d3.tar.gz",
+           "https://github.com/supernovaremnant/Android-OpenCL-Driver/archive/9a226387642bad0205b42926a7a231760081d92b.tar.gz",
       ],
-      sha256 = "6b68c6850a32ba98dd24c235468727ac974d8acca602ea8b059d9b07b03e2e78",
-      strip_prefix = "Android-OpenCL-Driver-dba95462c5fbd116e93254f349ba91f15c81d6d3",
+      sha256 = "fcbdce257235e2b0ec13ed70990b78c087dec57fd99992fb1d13fcae6f22eba1",
+      strip_prefix = "Android-OpenCL-Driver-9a226387642bad0205b42926a7a231760081d92b",
       build_file = str(Label("//third_party:libopencl.BUILD")),
   )
 

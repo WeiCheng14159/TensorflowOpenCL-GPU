@@ -1,4 +1,4 @@
-# Description: OpenCL driver for Xiaomi 6 phone (Snadragon 835 CPU + Adreno 540 GPU)
+# Description: OpenCL driver Adreno 540 GPU & Mali T880 GPU
 # https://github.com/supernovaremnant/Android-OpenCL-Driver
 
 package(
@@ -12,21 +12,21 @@ exports_files(["LICENSE.TXT"])
 filegroup(
     name = "qualcomm_adreno_540_32_bit_lib",
     srcs = [
-        "libOpenCL_32.so",
+        "Qualcomm-Adreno-540/libOpenCL_32.so",
     ],
 )
 
 filegroup(
     name = "qualcomm_adreno_540_64_bit_lib",
     srcs = [
-        "libOpenCL_64.so",
+        "Qualcomm-Adreno-540/libOpenCL_64.so",
     ],
 )
 
 filegroup(
     name = "arm_mali_t880_64_bit_lib",
     srcs = [
-        "libOpenCLIcd.so",
+        "ARM-Mali-T880/libOpenCLIcd.so",
     ],
 )
 
