@@ -39,13 +39,13 @@ int main(int argc, char* argv[]) {
     auto Tx_map = Tx.tensor<float, 2>();
     for( int i = 0 ; i < N ; i ++ ){
       for( auto j = 0 ; j < N ; j ++ ){
-        Tx_map(i, j) = (i==j) ? 1 : 0;
+        Tx_map(i, j) = (i==j) ? 1.5f : 0.1f;
       }
     }
     auto Ty_map = Ty.tensor<float, 2>();
     for( int i = 0 ; i < N ; i ++ ){
       for( auto j = 0 ; j < N ; j ++ ){
-        Ty_map(i, j) = (i!=j) ? 1 : 0;
+        Ty_map(i, j) = (i!=j) ? 1.5f : 0.1f;
       }
     }
 
