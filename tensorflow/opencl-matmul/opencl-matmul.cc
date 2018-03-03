@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << ">>> [Eigen] Starting " << NUM_RUNS << " Eigen MatMul runs...";
     gettimeofday(&start, NULL);
 
-    eigen_res = Tx_mat * Ty_mat;
+    eigen_res = Ty_mat * ( Tx_mat * Ty_mat );
     // cout << "Eigen result: \n" << eigen_res << endl ;
 
     gettimeofday(&end, NULL);
