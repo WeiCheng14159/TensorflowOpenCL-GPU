@@ -105,15 +105,14 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << ">>> Done: took " << runtime << " us per run";
 
     cout << "Checking results ...\n";
+    double accu_err = 0;
     for( auto row = 0 ; row < Tx.dim_size(0) ; row ++ )
     {
       for( auto col = 0 ; col < Ty.dim_size(1) ; col ++ ){
-        if( tf_res(row, col) != eigen_res(row, col) )
-        { cout << "Results mismatch!\n"; return -1; }
+        accu_err += abs( tf_res(row, col) - eigen_res(row, col) );
       }
     }
-    cout << "Results match!\n";
+    cout << "err per unit: " << accu_err/(N*N) << endl;
 
-    session->Close();
     return 0;
 }
