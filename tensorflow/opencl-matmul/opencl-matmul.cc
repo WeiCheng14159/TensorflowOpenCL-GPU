@@ -4,9 +4,6 @@
 #include "tensorflow/core/public/session.h"
 #include "tensorflow/core/graph/default_device.h"
 
-// Numbers of times to get an average timing result
-#define NUM_RUNS 10
-
 using namespace tensorflow;
 using namespace std;
 
@@ -35,6 +32,9 @@ int main(int argc, char* argv[]) {
     Tensor Tx (DT_FLOAT, TensorShape({N ,N}));
     Tensor Ty (DT_FLOAT, TensorShape({N ,N}));
 
+    // Number of runs
+    int num_runs = atoi( argv[2] );
+
     // Matrix initializaiotn
     auto Tx_map = Tx.tensor<float, 2>();
     for( int i = 0 ; i < N ; i ++ ){
@@ -49,10 +49,10 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    LOG(INFO) << ">>> [TF] Starting " << NUM_RUNS << " TF MatMul runs...";
+    LOG(INFO) << ">>> [TF] Starting " << num_runs << " TF MatMul runs...";
     gettimeofday(&start, NULL);
 
-    for (int r=0; r<NUM_RUNS; r++) {
+    for (int r=0; r<num_runs; r++) {
       // Compute matrix multiplaction result using TF
       TF_CHECK_OK(session->Run({{"x", Tx}, {"y", Ty}}, {"matmul"}, {}, &outputs)); // Get cost
     }
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&end, NULL);
     double interval = ( end.tv_sec * 1.0e6 + end.tv_usec ) -
       ( start.tv_sec * 1.0e6 + start.tv_usec );
-    double runtime = interval / NUM_RUNS;
+    double runtime = interval / num_runs;
     LOG(INFO) << ">>> Done: took " << runtime << " us per run";
 
     // Compute matrix multiplaction result using Eigen
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
                               Tx.dim_size(0),           /* num_rows */
                               Ty.dim_size(1)            /* num_cols */);
 
-    LOG(INFO) << ">>> [Eigen] Starting " << NUM_RUNS << " Eigen MatMul runs...";
+    LOG(INFO) << ">>> [Eigen] Starting " << num_runs << " Eigen MatMul runs...";
     gettimeofday(&start, NULL);
 
     eigen_res = Ty_mat * ( Tx_mat * Ty_mat );
