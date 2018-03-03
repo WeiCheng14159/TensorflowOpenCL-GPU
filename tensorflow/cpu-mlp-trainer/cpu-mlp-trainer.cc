@@ -2,15 +2,17 @@
 
 #include "tensorflow/core/public/session.h"
 #include "tensorflow/core/graph/default_device.h"
+
 using namespace tensorflow;
+using namespace std;
 
 int main(int argc, char* argv[]) {
 
-    std::string graph_definition = "mlp.pb";
+    string graph_definition = "mlp.pb";
     Session* session;
     GraphDef graph_def;
     SessionOptions opts;
-    std::vector<Tensor> outputs; // Store outputs
+    vector<Tensor> outputs; // Store outputs
     TF_CHECK_OK(ReadBinaryProto(Env::Default(), graph_definition, &graph_def));
 
     // Set GPU options
@@ -35,23 +37,23 @@ int main(int argc, char* argv[]) {
     _XTensor.setRandom();
     _YTensor.setRandom();
 
-    float cost = 0.0; 
+    float cost = 0.0;
 
-    TF_CHECK_OK(session->Run({{"x", x}, {"y", y}}, {"cost"}, {}, &outputs)); // Get cost        
-    float initial_cost = outputs[0].scalar<float>()(0); 
+    TF_CHECK_OK(session->Run({{"x", x}, {"y", y}}, {"cost"}, {}, &outputs)); // Get cost
+    float initial_cost = outputs[0].scalar<float>()(0);
 
     int iter = 0;
 
     do{
         TF_CHECK_OK(session->Run({{"x", x}, {"y", y}}, {"cost"}, {}, &outputs)); // Get cost
         cost = outputs[0].scalar<float>()(0);
-        std::cout << "Iteration: " << iter << ", Cost: " <<  cost << std::endl;
+        cout << "Iteration: " << iter << ", Cost: " <<  cost << endl;
         TF_CHECK_OK(session->Run({{"x", x}, {"y", y}}, {}, {"train"}, nullptr)); // Train
         outputs.clear();
         iter++;
     }while( cost >= 0.01 * initial_cost );
 
-    session->Close();
-    delete session;
+    cout << "Final cost: " << cost << endl;
+
     return 0;
 }
