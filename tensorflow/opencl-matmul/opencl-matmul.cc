@@ -14,11 +14,11 @@ int main(int argc, char* argv[]) {
     // Timers
     struct timeval start, end;
 
-    std::string graph_definition = "matmul.pb";
+    string graph_definition = "matmul.pb";
     Session* session;
     GraphDef graph_def;
     SessionOptions opts;
-    std::vector<Tensor> outputs; // Store outputs
+    vector<Tensor> outputs; // Store outputs
     TF_CHECK_OK(ReadBinaryProto(Env::Default(), graph_definition, &graph_def));
 
     // Set graph options
@@ -30,6 +30,7 @@ int main(int argc, char* argv[]) {
     // Load graph into session
     TF_CHECK_OK(session->Create(graph_def));
 
+    // Matrix size
     int N = atoi( argv[1] );
     Tensor Tx (DT_FLOAT, TensorShape({N ,N}));
     Tensor Ty (DT_FLOAT, TensorShape({N ,N}));
