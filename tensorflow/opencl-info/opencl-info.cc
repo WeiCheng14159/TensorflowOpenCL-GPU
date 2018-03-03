@@ -1,5 +1,5 @@
 /* Copyright 1993-2009 NVIDIA Corporation.  All rights reserved.
-   Modified by Mark Zwolinski, December 2009 
+   Modified by Mark Zwolinski, December 2009
    Modified by Robert McGibbon, August 2013
    Modified by Cheng Wei, November 2017
 */
@@ -81,27 +81,27 @@ void clPrintDevInfo(cl_device_id device) {
   cl_ulong mem_size;
   clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(mem_size), &mem_size, NULL);
   printf("  CL_DEVICE_GLOBAL_MEM_SIZE:\t\t%u MByte\n", (unsigned int)(mem_size / (1024*1024)));
-    
+
   // CL_DEVICE_GLOBAL_MEM_CACHE_TYPE
   cl_device_mem_cache_type global_mem_type;
   clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_CACHE_TYPE, sizeof(global_mem_type), &global_mem_type, NULL);
   if ( global_mem_type == CL_NONE )
-    printf("  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_NONE\n" );   
+    printf("  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_NONE\n" );
   else if( global_mem_type == CL_READ_ONLY_CACHE )
-    printf("  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_READ_ONLY_CACHE\n" );   
+    printf("  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_READ_ONLY_CACHE\n" );
   else if( global_mem_type == CL_READ_WRITE_CACHE )
-    printf("  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_READ_WRITE_CACHE\n" );   
- 
+    printf("  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE:      CL_READ_WRITE_CACHE\n" );
+
   // CL_DEVICE_GLOBAL_MEM_CACHE_SIZE
   cl_ulong global_mem_cache_size;
   clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, sizeof(global_mem_cache_size), &global_mem_cache_size, NULL);
   printf("  CL_DEVICE_GLOBAL_MEM_CACHE_SIZE:      %u KByte\n", (unsigned int)(global_mem_cache_size)/(1024));
 
   // CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE
-  cl_uint mem_cacheline_size; 
+  cl_uint mem_cacheline_size;
   clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE, sizeof(mem_cacheline_size), &mem_cacheline_size, NULL);
   printf("  CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE:  %u Byte\n", (unsigned int)(mem_cacheline_size));
-  
+
   // CL_DEVICE_ERROR_CORRECTION_SUPPORT
   cl_bool error_correction_support;
   clGetDeviceInfo(device, CL_DEVICE_ERROR_CORRECTION_SUPPORT, sizeof(error_correction_support), &error_correction_support, NULL);
@@ -168,53 +168,53 @@ void clPrintDevInfo(cl_device_id device) {
   clGetDeviceInfo(device, CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &vec_width[5], NULL);
   printf("CHAR %u, SHORT %u, INT %u, FLOAT %u, DOUBLE %u\n",
    vec_width[0], vec_width[1], vec_width[2], vec_width[3], vec_width[4]);
-    
+
   //CL_DEVICE_SVM_CAPABILITIES
     /*
-    Describes the various shared virtual memory (a.k.a. SVM) 
-    memory allocation types the device supports. Coarse-grain 
-    SVM allocations are required to be supported by all OpenCL 
-    2.0 devices. This is a bit-field that describes a combination 
+    Describes the various shared virtual memory (a.k.a. SVM)
+    memory allocation types the device supports. Coarse-grain
+    SVM allocations are required to be supported by all OpenCL
+    2.0 devices. This is a bit-field that describes a combination
     of the following values:
 
-    CL_DEVICE_SVM_COARSE_GRAIN_BUFFER – Support for coarse-grain buffer 
-    sharing using clSVMAlloc. Memory consistency is guaranteed at synchronization 
-    points and the host must use calls to 
+    CL_DEVICE_SVM_COARSE_GRAIN_BUFFER – Support for coarse-grain buffer
+    sharing using clSVMAlloc. Memory consistency is guaranteed at synchronization
+    points and the host must use calls to
     clEnqueueMapBuffer and clEnqueueUnmapMemObject.
 
-    CL_DEVICE_SVM_FINE_GRAIN_BUFFER – Support for fine-grain 
-    buffer sharing using clSVMAlloc. Memory consistency is guaranteed 
-    at synchronization points without need for clEnqueueMapBuffer 
+    CL_DEVICE_SVM_FINE_GRAIN_BUFFER – Support for fine-grain
+    buffer sharing using clSVMAlloc. Memory consistency is guaranteed
+    at synchronization points without need for clEnqueueMapBuffer
     and clEnqueueUnmapMemObject.
 
     CL_DEVICE_SVM_FINE_GRAIN_SYSTEM – Support for sharing the
-    host’s entire virtual memory including memory allocated using 
+    host’s entire virtual memory including memory allocated using
     malloc. Memory consistency is guaranteed at synchronization points.
 
-    CL_DEVICE_SVM_ATOMICS – Support for the OpenCL 2.0 atomic operations 
-    that provide memory consistency across the host and all OpenCL 
+    CL_DEVICE_SVM_ATOMICS – Support for the OpenCL 2.0 atomic operations
+    that provide memory consistency across the host and all OpenCL
     devices supporting fine-grain SVM allocations.
 
     The mandated minimum capability is CL_DEVICE_SVM_COARSE_GRAIN_BUFFER.
     */
-    cl_device_svm_capabilities svm_cap; 
+    cl_device_svm_capabilities svm_cap;
     clGetDeviceInfo(device, CL_DEVICE_SVM_CAPABILITIES, sizeof(svm_cap), &svm_cap, NULL);
-    
+
     char svm_cap_string[1024] = "";
 
     if( svm_cap == CL_DEVICE_SVM_COARSE_GRAIN_BUFFER )
-        strcpy(svm_cap_string, "CL_DEVICE_SVM_COARSE_GRAIN_BUFFER"); 
+        strcpy(svm_cap_string, "CL_DEVICE_SVM_COARSE_GRAIN_BUFFER");
     else if(svm_cap == CL_DEVICE_SVM_FINE_GRAIN_BUFFER )
-        strcpy(svm_cap_string, "CL_DEVICE_SVM_FINE_GRAIN_BUFFER"); 
+        strcpy(svm_cap_string, "CL_DEVICE_SVM_FINE_GRAIN_BUFFER");
     else if(svm_cap == CL_DEVICE_SVM_FINE_GRAIN_SYSTEM )
-        strcpy(svm_cap_string, "CL_DEVICE_SVM_FINE_GRAIN_SYSTEM"); 
+        strcpy(svm_cap_string, "CL_DEVICE_SVM_FINE_GRAIN_SYSTEM");
     else if(svm_cap == CL_DEVICE_SVM_ATOMICS )
-        strcpy(svm_cap_string, "CL_DEVICE_SVM_ATOMICS"); 
+        strcpy(svm_cap_string, "CL_DEVICE_SVM_ATOMICS");
     else
-        strcpy(svm_cap_string, "err"); 
+        strcpy(svm_cap_string, "err");
     printf("  CL_DEVICE_SVM_CAPABILITIES: \t%s\n", svm_cap_string);
 
-    
+
     printf("\n\n\n");
 }
 
