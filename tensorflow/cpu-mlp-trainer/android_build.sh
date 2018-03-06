@@ -2,6 +2,7 @@
 
 TARGET=${PWD##*/}
 
+# OpenCL accelerated version
 bazel build --config=android_arm64 :$TARGET \
     --verbose_failures \
     --cxxopt="-std=c++11" \
