@@ -25,25 +25,25 @@ filegroup(
 )
 
 ANDROID_C_OPTS = tf_copts() + [
-  "-ffunction-sections",
-  "-fdata-sections",
-  "-fPIE",
-  "-pie",
-  "-fexceptions",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fPIE",
+    "-pie",
+    "-fexceptions",
 ]
 
 ANDROID_LINK_OPTS = [
-  "-fPIE",
-  "-pie",
-  "-landroid",
-  "-latomic",
-  "-ldl",
-  "-llog",
-  "-lm",
-  "-z defs",
-  "-s",
-  "-Wl,--gc-sections",
-  "-fuse-ld=gold",
+    "-fPIE",
+    "-pie",
+    "-landroid",
+    "-latomic",
+    "-ldl",
+    "-llog",
+    "-lm",
+    "-z defs",
+    "-s",
+    "-Wl,--gc-sections",
+    "-fuse-ld=gold",
 ]
 
 cc_binary(
