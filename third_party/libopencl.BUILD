@@ -39,6 +39,7 @@ cc_library(
     srcs = [
         ":qualcomm_adreno_540_64_bit_lib",
     ],
+    linkstatic = 1,
 )
 
 cc_library(
@@ -50,4 +51,5 @@ cc_library(
     srcs = [
         ":arm_mali_t880_64_bit_lib",
     ],
+    linkstatic = 1,
 )
