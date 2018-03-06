@@ -34,6 +34,9 @@ cc_library(
     srcs = [
       ":clblast-srcs",
     ],
+    defines = [
+      "OPENCL_API",
+    ],
     deps = [
       "//external:android_opencl_libs",
     ],
