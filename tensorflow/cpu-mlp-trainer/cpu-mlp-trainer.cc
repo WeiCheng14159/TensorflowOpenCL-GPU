@@ -15,11 +15,6 @@ int main(int argc, char* argv[]) {
     vector<Tensor> outputs; // Store outputs
     TF_CHECK_OK(ReadBinaryProto(Env::Default(), graph_definition, &graph_def));
 
-    // Set GPU options
-    graph::SetDefaultDevice("/cpu:0", &graph_def);
-    //opts.config.mutable_gpu_options()->set_per_process_gpu_memory_fraction(0.5);
-    //opts.config.mutable_gpu_options()->set_allow_growth(true);
-
     // create a new session
     TF_CHECK_OK(NewSession(opts, &session));
 
