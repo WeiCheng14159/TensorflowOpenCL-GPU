@@ -8,6 +8,10 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
 
+  if( argc != 2){
+    cerr << "usage [Batch Size]" << endl;
+  }
+
     string graph_definition = "mlp.pb";
     Session* session;
     GraphDef graph_def;
@@ -40,7 +44,7 @@ int main(int argc, char* argv[]) {
     float initial_cost = outputs[0].scalar<float>()(0);
 
     int iter = 0;
-    cout << "initial_cost: " << initial_cost << endl; 
+    cout << "initial_cost: " << initial_cost << endl;
     do{
         TF_CHECK_OK(session->Run({{"x", x}, {"y", y}}, {"cost"}, {}, &outputs)); // Get cost
         cost = outputs[0].scalar<float>()(0);
