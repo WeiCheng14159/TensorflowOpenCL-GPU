@@ -8,17 +8,16 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
 
+  if( argc != 2){
+    cerr << "usage [Batch Size]" << endl;
+  }
+
     string graph_definition = "mlp.pb";
     Session* session;
     GraphDef graph_def;
     SessionOptions opts;
     vector<Tensor> outputs; // Store outputs
     TF_CHECK_OK(ReadBinaryProto(Env::Default(), graph_definition, &graph_def));
-
-    // Set GPU options
-    graph::SetDefaultDevice("/cpu:0", &graph_def);
-    //opts.config.mutable_gpu_options()->set_per_process_gpu_memory_fraction(0.5);
-    //opts.config.mutable_gpu_options()->set_allow_growth(true);
 
     // create a new session
     TF_CHECK_OK(NewSession(opts, &session));
@@ -29,8 +28,10 @@ int main(int argc, char* argv[]) {
     // Initialize our variables
     TF_CHECK_OK(session->Run({}, {}, {"init_all_vars_op"}, nullptr));
 
-    Tensor x(DT_FLOAT, TensorShape({10, 5}));
-    Tensor y(DT_FLOAT, TensorShape({10, 5}));
+    int batch_size = atoi( argv[1] );
+
+    Tensor x(DT_FLOAT, TensorShape({batch_size, 5}));
+    Tensor y(DT_FLOAT, TensorShape({batch_size, 5}));
     auto _XTensor = x.matrix<float>();
     auto _YTensor = y.matrix<float>();
 
@@ -43,7 +44,7 @@ int main(int argc, char* argv[]) {
     float initial_cost = outputs[0].scalar<float>()(0);
 
     int iter = 0;
-
+    cout << "initial_cost: " << initial_cost << endl;
     do{
         TF_CHECK_OK(session->Run({{"x", x}, {"y", y}}, {"cost"}, {}, &outputs)); // Get cost
         cost = outputs[0].scalar<float>()(0);
