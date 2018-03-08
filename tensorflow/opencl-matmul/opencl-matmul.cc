@@ -8,6 +8,12 @@ using namespace tensorflow;
 using namespace std;
 
 int main(int argc, char* argv[]) {
+
+    if( argc != 3 ){
+      cerr << "expected 2 arguments [Size of Matrix] [Num of Runs]" << endl;
+      exit(1);
+    }
+
     // Timers
     struct timeval start, end;
 
