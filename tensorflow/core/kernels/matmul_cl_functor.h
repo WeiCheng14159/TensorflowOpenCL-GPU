@@ -3,8 +3,6 @@
 #ifndef MATMUL_CL_FUNCTOR_H_
 #define MATMUL_CL_FUNCTOR_H_
 
-#include <unistd.h>
-
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/tensor_types.h"
@@ -68,39 +66,27 @@ namespace tensorflow {
       cl_int release(){
 
         // Free OpenCL memory objects
-        if( clReleaseMemObject(a) != CL_SUCCESS ||
-            clReleaseMemObject(b) != CL_SUCCESS ||
-            clReleaseMemObject(c) != CL_SUCCESS )
-        {
-          LOG(ERROR) << "clReleaseMemObject";
-          return CL_INVALID_MEM_OBJECT;
-        }
+        clReleaseMemObject(a);
+        clReleaseMemObject(b);
+        clReleaseMemObject(c);
+
+        // Free OpenCL kernel
+        clReleaseKernel(clKernel);
+
+        // Free OpenCL program
+        clReleaseProgram(clProgram);
 
         // Free OpenCL command queue
-        err = CL_SUCCESS;
-        err = clReleaseCommandQueue(clQueue);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clReleaseCommandQueue fail with code " << err;
-          return err;
-        }
+        clReleaseCommandQueue(clQueue);
 
         // Free OpenCL context
-        err = CL_SUCCESS;
-        err = clReleaseContext(clCtx);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clReleaseContext fail with code " << err;
-          return err;
-        }
+        clReleaseContext(clCtx);
 
         // Free OpenCL events
-        if( clReleaseEvent(kernel_event)          != CL_SUCCESS ||
-            clReleaseEvent(writeBuffer_events[0]) != CL_SUCCESS ||
-            clReleaseEvent(writeBuffer_events[1]) != CL_SUCCESS ||
-            clReleaseEvent(writeBuffer_events[2]) != CL_SUCCESS )
-        {
-          LOG(ERROR) << "clReleaseEvent";
-          return CL_INVALID_EVENT;
-        }
+        clReleaseEvent(kernel_event);
+        clReleaseEvent(writeBuffer_events[0]);
+        clReleaseEvent(writeBuffer_events[1]);
+        clReleaseEvent(writeBuffer_events[2]);
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -122,7 +108,7 @@ namespace tensorflow {
         // Release OpenCL resources
         err = release();
         if( err != CL_SUCCESS ){
-          LOG(ERROR) << "release fail with code " << err;
+          LOG(ERROR) << "release() fail with code " << err;
           return err;
         }
 
@@ -174,7 +160,7 @@ namespace tensorflow {
         read_file(&clKernelBinaryFile, &clKernelBinSize, clKernelBinName.c_str() );
 
         // Create an OpenCL program object from binary
-        cl_program clProgram =
+        clProgram =
           clCreateProgramWithBinary(clCtx, 1, &clDevice, &clKernelBinSize,
                                   (const unsigned char **)&clKernelBinaryFile,
                                   NULL, &err);
@@ -342,6 +328,9 @@ namespace tensorflow {
       // OpenCL kernel object
       cl_kernel clKernel;
 
+      // OpenCL program object
+      cl_program clProgram;
+
       // Read OpenCL binary file from disk
       int read_file(unsigned char **output, size_t *size, const char *name) {
         FILE* fp = fopen(name, "rb");
@@ -405,8 +394,6 @@ namespace functor {
         const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair)
       {
 
-      // usleep( 500000 );
-
       // Init clEngine with type float
       clEngine<float> c = clEngine<float>();
 
@@ -429,8 +416,8 @@ namespace functor {
       }
 
       // GEMM computation
-      // status = c.clLoadFromBinaryCompute();
-      status = c.clBlastCompute(dim_pair);
+      status = c.clLoadFromBinaryCompute();
+      // status = c.clBlastCompute(dim_pair);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL compute fail with code " << status;
       }
