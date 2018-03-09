@@ -3,8 +3,6 @@
 #ifndef MATMUL_CL_FUNCTOR_H_
 #define MATMUL_CL_FUNCTOR_H_
 
-#include <unistd.h>
-
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/tensor_types.h"
@@ -67,6 +65,8 @@ namespace tensorflow {
       // Release all OpenCL related resourcse
       cl_int release(){
 
+        err = CL_SUCCESS;
+
         // Free OpenCL memory objects
         if( clReleaseMemObject(a) != CL_SUCCESS ||
             clReleaseMemObject(b) != CL_SUCCESS ||
@@ -76,8 +76,21 @@ namespace tensorflow {
           return CL_INVALID_MEM_OBJECT;
         }
 
+        // Free OpenCL kernel
+        err = clReleaseKernel(clKernel);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clReleaseKernel fail with code " << err;
+          return err;
+        }
+
+        // Free OpenCL program
+        err = clReleaseProgram(clProgram);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clReleaseProgram fail with code " << err;
+          return err;
+        }
+
         // Free OpenCL command queue
-        err = CL_SUCCESS;
         err = clReleaseCommandQueue(clQueue);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clReleaseCommandQueue fail with code " << err;
@@ -174,7 +187,7 @@ namespace tensorflow {
         read_file(&clKernelBinaryFile, &clKernelBinSize, clKernelBinName.c_str() );
 
         // Create an OpenCL program object from binary
-        cl_program clProgram =
+        clProgram =
           clCreateProgramWithBinary(clCtx, 1, &clDevice, &clKernelBinSize,
                                   (const unsigned char **)&clKernelBinaryFile,
                                   NULL, &err);
@@ -342,6 +355,9 @@ namespace tensorflow {
       // OpenCL kernel object
       cl_kernel clKernel;
 
+      // OpenCL program object
+      cl_program clProgram;
+
       // Read OpenCL binary file from disk
       int read_file(unsigned char **output, size_t *size, const char *name) {
         FILE* fp = fopen(name, "rb");
@@ -405,8 +421,6 @@ namespace functor {
         const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair)
       {
 
-      // usleep( 500000 );
-
       // Init clEngine with type float
       clEngine<float> c = clEngine<float>();
 
@@ -429,8 +443,8 @@ namespace functor {
       }
 
       // GEMM computation
-      // status = c.clLoadFromBinaryCompute();
-      status = c.clBlastCompute(dim_pair);
+      status = c.clLoadFromBinaryCompute();
+      // status = c.clBlastCompute(dim_pair);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL compute fail with code " << status;
       }
