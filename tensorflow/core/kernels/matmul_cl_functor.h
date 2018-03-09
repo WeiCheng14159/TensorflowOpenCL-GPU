@@ -98,7 +98,6 @@ namespace tensorflow {
         }
 
         // Free OpenCL context
-        err = CL_SUCCESS;
         err = clReleaseContext(clCtx);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clReleaseContext fail with code " << err;
@@ -108,8 +107,7 @@ namespace tensorflow {
         // Free OpenCL events
         if( clReleaseEvent(kernel_event)          != CL_SUCCESS ||
             clReleaseEvent(writeBuffer_events[0]) != CL_SUCCESS ||
-            clReleaseEvent(writeBuffer_events[1]) != CL_SUCCESS ||
-            clReleaseEvent(writeBuffer_events[2]) != CL_SUCCESS )
+            clReleaseEvent(writeBuffer_events[1]) != CL_SUCCESS )
         {
           LOG(ERROR) << "clReleaseEvent";
           return CL_INVALID_EVENT;
@@ -125,11 +123,19 @@ namespace tensorflow {
         // Init cl err code
         err = CL_SUCCESS;
 
+        // Use the map function to return a pointer to the host <= blocking
+        cl_float * cl_C = ( cl_float * ) clEnqueueMapBuffer(clQueue, c, CL_TRUE,
+                          CL_MAP_READ, 0, in1_size, 0, NULL, NULL, &err);
+
         // Read results
-        err = clEnqueueReadBuffer(clQueue, c, CL_TRUE, 0, out_size, out.data(), 0, NULL, NULL);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clEnqueueReadBuffer fail with code " << err;
-          return err;
+        if( err == CL_SUCCESS ){
+          // Read computed result back to host
+          for( auto idx = 0 ; idx < M*N ; idx++){
+            out.data()[idx] = cl_C[idx];
+          }
+        }else{
+          LOG(ERROR) << "Host-side pointer for matrix C is invalid";
+          return CL_FALSE;
         }
 
         // Release OpenCL resources
@@ -153,26 +159,54 @@ namespace tensorflow {
         // Init cl err code
         err = CL_SUCCESS;
 
-        // Allocate memory buffers
-        a = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in0_size, NULL, NULL);
-        b = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in1_size, NULL, NULL);
-        c = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, out_size, NULL, NULL);
-
-        // Enqueue write buffer commands (acynchronous write)
-        err = clEnqueueWriteBuffer(clQueue, a, CL_FALSE, 0, in0_size, in0.data(),
-                                   0, NULL, &writeBuffer_events[0]);
-        if( err != CL_SUCCESS ){ return err; }
-
-        err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
-                                   0, NULL, &writeBuffer_events[1]);
-        if( err != CL_SUCCESS ){ return err; }
-          // Write to buffer c to cverwrite previous results
-        err = clEnqueueWriteBuffer(clQueue, c, CL_FALSE, 0, out_size, out.data(),
-                                   0, NULL, &writeBuffer_events[2]);
-        if( err != CL_SUCCESS ){ return err; }
+        // Use zero copy to avoid memeory copy
+        // Matrix A
+        a = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                          in0_size, NULL, NULL);
+        // Use the map function to return a pointer to the host <= blocking
+        cl_float * cl_A = ( cl_float * ) clEnqueueMapBuffer(clQueue, a, CL_FALSE,
+                          CL_MAP_WRITE, 0, in0_size, 0, NULL, &writeBuffer_events[0], NULL);
+        // Matrix B
+        b = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                          in1_size, NULL, NULL);
+        // Use the map function to return a pointer to the host <= blocking
+        cl_float * cl_B = ( cl_float * ) clEnqueueMapBuffer(clQueue, b, CL_FALSE,
+                          CL_MAP_WRITE, 0, in1_size, 0, NULL, &writeBuffer_events[1], NULL);
 
         // Wait for completion
-        clWaitForEvents(3, writeBuffer_events);
+        clWaitForEvents(2, writeBuffer_events);
+
+        // Host update the buffer using pointer cl_A in host address space
+        for( auto idx = 0 ; idx < M*K ; idx ++){
+          cl_A[ idx ] = in0.data()[idx];
+        }
+        // Host update the buffer using pointer cl_B in host address space
+        for( auto idx = 0 ; idx < K*N ; idx ++){
+          cl_B[ idx ] = in1.data()[idx];
+        }
+
+        // Unmap the object -> Used in the OpenCL kernel
+        err = clEnqueueUnmapMemObject( clQueue, a, (void*) cl_A, 0, NULL,
+                                      &writeBuffer_events[0] );
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnqueueUnmapMemObject fail with code " << err;
+          return err;
+        }
+
+        // Unmap the object -> Used in the OpenCL kernel
+        err = clEnqueueUnmapMemObject( clQueue, b, (void*) cl_B, 0, NULL,
+                                      &writeBuffer_events[1] );
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnqueueUnmapMemObject fail with code " << err;
+          return err;
+        }
+
+        // Matrix C
+        c = clCreateBuffer(clCtx, CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                          out_size, NULL, NULL);
+
+        // Wait for completion
+        clWaitForEvents(2, writeBuffer_events);
         return CL_SUCCESS;
       }
 
@@ -344,9 +378,14 @@ namespace tensorflow {
       cl_mem b;
       cl_mem c;
 
+      // Copied memory data
+      cl_float * cl_A = NULL;
+      cl_float * cl_B = NULL;
+      cl_float * cl_C = NULL;
+
       // OpenCL events
       cl_event kernel_event;
-      cl_event writeBuffer_events[3];
+      cl_event writeBuffer_events[2];
 
       // OpenCL binary name. When loading OpenCL compiled binary from disk
       std::string clKernelBinName = "matmul.bin";
