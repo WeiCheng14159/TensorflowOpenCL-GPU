@@ -65,6 +65,8 @@ namespace tensorflow {
       // Release all OpenCL related resourcse
       cl_int release(){
 
+        err = CL_SUCCESS;
+
         // Free OpenCL memory objects
         clReleaseMemObject(a);
         clReleaseMemObject(b);
@@ -76,8 +78,26 @@ namespace tensorflow {
         // Free OpenCL program
         clReleaseProgram(clProgram);
 
+        // Free OpenCL kernel
+        err = clReleaseKernel(clKernel);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clReleaseKernel fail with code " << err;
+          return err;
+        }
+
+        // Free OpenCL program
+        err = clReleaseProgram(clProgram);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clReleaseProgram fail with code " << err;
+          return err;
+        }
+
         // Free OpenCL command queue
-        clReleaseCommandQueue(clQueue);
+        err = clReleaseCommandQueue(clQueue);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clReleaseCommandQueue fail with code " << err;
+          return err;
+        }
 
         // Free OpenCL context
         clReleaseContext(clCtx);
