@@ -44,7 +44,7 @@ def main(_):
   W = tf.Variable(tf.truncated_normal([ img_size * img_size, 10], stddev=0.1), name="W")
   b = tf.Variable(tf.zeros([10]), name="b")
 
-  y_out = tf.nn.tanh( tf.matmul(x, W) + b )
+  y_out = tf.matmul(x, W) + b
 
   # Define loss and optimizer
   cross_entropy = tf.losses.sparse_softmax_cross_entropy(labels=y, logits=y_out)
