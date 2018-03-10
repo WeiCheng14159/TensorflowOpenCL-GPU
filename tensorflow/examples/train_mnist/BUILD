@@ -11,65 +11,73 @@ exports_files(["LICENSE"])
 
 load(
     "//tensorflow:tensorflow.bzl",
-    "tf_cc_binary",
-  )
-
-cc_binary(
-    name = "train_mnist",
-    srcs = [
-        "main.cc",
-    ],
-    copts = select({
-      "//tensorflow:android": [],
-      "//conditions:default": [],
-    }),
-    linkopts = select({
-        "//tensorflow:android": [
-            "-pie",
-            "-landroid",
-            "-ljnigraphics",
-            "-llog",
-            "-lm",
-            "-z defs",
-            "-s",
-            "-Wl,--exclude-libs,ALL",
-            "-fuse-ld=gold",
-        ],
-        "//conditions:default": ["-lm"],
-    }),
-    deps = select({
-      "//tensorflow:android": [
-          # cc:cc_ops is used to include image ops (for label_image)
-          # Jpg, gif, and png related code won't be included
-          "//tensorflow/cc:cc_ops",
-          "//tensorflow/core:android_tensorflow_lib",
-          # cc:android_tensorflow_image_op is for including jpeg/gif/png
-          # decoder to enable real-image evaluation on Android
-          "//external:libmnist",
-      ],
-      "//conditions:default": [
-          "//tensorflow/cc:cc_ops",
-          "//tensorflow/core:core_cpu",
-          "//tensorflow/core:framework",
-          "//tensorflow/core:framework_internal",
-          "//tensorflow/core:lib",
-          "//tensorflow/core:protos_all_cc",
-          "//tensorflow/core:tensorflow",
-          "//external:libmnist",
-      ],
-    }),
+    "tf_copts",
 )
 
-filegroup(
-    name = "all_files",
-    srcs = glob(
-        ["**/*"],
-        exclude = [
-            "**/METADATA",
-            "**/OWNERS",
-            "bin/**",
-            "gen/**",
-        ],
-    ),
-    visibility = ["//tensorflow:__subpackages__"],
+ANDROID_C_OPTS = tf_copts() + [
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fPIE",
+    "-pie",
+    "-fexceptions",
+]
+
+ANDROID_LINK_OPTS = [
+    "-fPIE",
+    "-pie",
+    "-landroid",
+    "-latomic",
+    "-ldl",
+    "-llog",
+    "-lm",
+    "-z defs",
+    "-s",
+    "-Wl,--gc-sections",
+    "-fuse-ld=gold",
+]
+
+cc_library(
+    name = "mnistReader",
+    srcs = [
+        "mnistReader.cc",
+    ],
+    hdrs = [
+        "mnistReader.h",
+    ],
+    deps = [
+        "//external:libmnist",
+        "//tensorflow/core:android_tensorflow_lib",
+    ],
+)
+
+cc_library(
+    name = "tf_runner_lib",
+    srcs = [
+        "tfRunner.cc",
+    ],
+    hdrs = [
+        "tfRunner.h",
+    ],
+    deps = [
+        "//tensorflow/cc:cc_ops",
+        "//tensorflow/core:android_tensorflow_lib",
+    ],
+)
+
+cc_binary(
+  name = "train_mnist",
+  srcs = [
+      "main.cc",
+      "util.h",
+      "tfRunner.h",
+      "tfRunner.cc",
+  ],
+  copts = ANDROID_C_OPTS,
+  linkopts = ANDROID_LINK_OPTS,
+  deps = [
+      "//tensorflow/cc:cc_ops",
+      "//tensorflow/core:android_tensorflow_lib",
+      ":mnistReader",
+      ":tf_runner_lib",
+  ],
 )
