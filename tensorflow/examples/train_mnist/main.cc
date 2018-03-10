@@ -131,36 +131,40 @@ int main(int argc, char* argv[]) {
 
     runner.sessionTrain(session, inputOpsName, outputOpsName, dropoutOpsName);
 
+    // Do overall testing for each 1000 data trained
+    if( beginIdx % 1000 == 0 )
+    {
+      vector<float> avg_accu;
+
+      for( auto beginIdx = 0 ; beginIdx < mnist.getTestingDataSize() - batchSize;
+        beginIdx = beginIdx + batchSize )
+      { // Testing Batch Loop
+
+        // LOG(INFO) << beginIdx << " tested.";
+
+        // image vector with dimension { 1, batchSize x input_width x input_height }
+        vector<float> batchTestImgFloatVec;
+        // label vector with dimension { 1, batchSize }
+        vector<long int> batchTestLabelInt64Vec;
+
+        mnist.getTestingBatch(beginIdx, batchSize, &batchTestImgFloatVec, &batchTestLabelInt64Vec);
+
+        // No drop out layer when testing
+        dropProb[0] = 1.0f;
+
+        runner.copyToTensor(batchTestImgFloatVec, batchTestLabelInt64Vec, dropProb);
+
+        double acc = runner.sessionTest(session, inputOpsName, outputOpsName, dropoutOpsName);
+
+        avg_accu.push_back( acc );
+        // LOG(INFO) << "Accuracy " << acc * 100 << "\%";
+
+      } // End of Testing Batch Loop
+
+      LOG(INFO) << "Overall testing accuracy " << 100 * accumulate(
+        avg_accu.begin(), avg_accu.end(), 0.0f) / avg_accu.size() << "\%";
+    }
+
   } // End of Training Batch Loop
-
-  vector<float> avg_accu;
-
-  for( auto beginIdx = 0 ; beginIdx < mnist.getTestingDataSize() - batchSize;
-    beginIdx = beginIdx + batchSize )
-  { // Testing Batch Loop
-
-    LOG(INFO) << beginIdx << " tested.";
-
-    // image vector with dimension { 1, batchSize x input_width x input_height }
-    vector<float> batchTestImgFloatVec;
-    // label vector with dimension { 1, batchSize }
-    vector<long int> batchTestLabelInt64Vec;
-
-    mnist.getTestingBatch(beginIdx, batchSize, &batchTestImgFloatVec, &batchTestLabelInt64Vec);
-
-    // No drop out layer when testing
-    dropProb[0] = 1.0f;
-
-    runner.copyToTensor(batchTestImgFloatVec, batchTestLabelInt64Vec, dropProb);
-
-    double acc = runner.sessionTest(session, inputOpsName, outputOpsName, dropoutOpsName);
-
-    avg_accu.push_back( acc );
-    LOG(INFO) << "Accuracy " << acc * 100 << "\%";
-
-  } // End of Testing Batch Loop
-
-  LOG(INFO) << "Overall testing accuracy " << 100 * accumulate(
-    avg_accu.begin(), avg_accu.end(), 0.0f) / avg_accu.size() << "\%";
 
 } // End of main
