@@ -898,3 +898,20 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       name = "libsycl",
       actual = "@libsycl_gtx_archive//:sycl-lib",
   )
+
+# Added by Cheng Wei, the Tensorboad C++ logger from (https://github.com/RustingSword/tensorboard_logger)
+
+  native.new_http_archive(
+      name = "lib_TensorboardLogger",
+      urls = [
+           "https://github.com/supernovaremnant/tensorboard_logger/archive/395d02e33bee46ccb44bce69223ae1466f2a1520.tar.gz",
+      ],
+      sha256 = "d084cd8fb4dcfc46a58ce8461c35876dcf95f3f7bd070124662f4cf8d08b9fed",
+      strip_prefix = "tensorboard_logger-395d02e33bee46ccb44bce69223ae1466f2a1520",
+      build_file = str(Label("//third_party:libTensorboardLogger.BUILD")),
+  )
+
+  native.bind(
+      name = "libTFlogger",
+      actual = "@lib_TensorboardLogger//:tensorboard_logger",
+  )

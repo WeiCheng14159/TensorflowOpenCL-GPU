@@ -5,6 +5,7 @@ By Cheng Wei on 2018/Jan/24
 // A simple program trainging a MNIST TF model using TF C++ API
 
 #include <vector>
+#include <chrono>
 
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/framework/tensor.h"
@@ -25,6 +26,7 @@ By Cheng Wei on 2018/Jan/24
 #include "tfRunner.h"
 #include "util.h"
 #include "mnistReader.h"
+#include "tensorboard_logger.h"
 
 // These are all common classes it's handy to reference with no namespace.
 using tensorflow::Flag;
@@ -50,6 +52,11 @@ int main(int argc, char* argv[]) {
   int32  batchSize        = 50;
   int32  maxSteps         = 100000;
   vector<float> dropProb  = { 0.5 } ;
+
+  int timeStamp = std::chrono::duration_cast<std::chrono::milliseconds>
+  ( std::chrono::system_clock::now().time_since_epoch() ).count();
+  string logFileName      = root_dir + "events.out.tfevents." + to_string(timeStamp)
+     + ".wei.local";
 
   vector<Flag> flag_list = {
       Flag("root_dir",      &root_dir,      "Binary Root Directory"),
@@ -95,6 +102,8 @@ int main(int argc, char* argv[]) {
   input_width  = mnist.getImgSize();
   input_height = mnist.getImgSize();
 
+  TensorBoardLogger logger( logFileName.c_str() );
+
   // Load TF model.
   unique_ptr<Session> session;
   string graph_path = io::JoinPath(root_dir, graphName);
@@ -132,7 +141,7 @@ int main(int argc, char* argv[]) {
     runner.sessionTrain(session, inputOpsName, outputOpsName, dropoutOpsName);
 
     // Do overall testing for each 1000 data trained
-    if( beginIdx % 1000 == 0 )
+    if( beginIdx % batchSize == 0 )
     {
       vector<float> avg_accu;
 
@@ -161,8 +170,11 @@ int main(int argc, char* argv[]) {
 
       } // End of Testing Batch Loop
 
-      LOG(INFO) << "Overall testing accuracy " << 100 * accumulate(
-        avg_accu.begin(), avg_accu.end(), 0.0f) / avg_accu.size() << "\%";
+      auto acc = 100 * accumulate( avg_accu.begin(), avg_accu.end(), 0.0f) / avg_accu.size();
+
+      LOG(INFO) << "Overall testing accuracy " << acc << "\%";
+
+      logger.add_scalar("accurarcy", beginIdx, acc);
     }
 
   } // End of Training Batch Loop

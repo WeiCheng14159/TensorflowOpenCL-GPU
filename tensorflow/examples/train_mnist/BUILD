@@ -79,5 +79,6 @@ cc_binary(
       "//tensorflow/core:android_tensorflow_lib",
       ":mnistReader",
       ":tf_runner_lib",
+      "//external:libTFlogger",
   ],
 )
