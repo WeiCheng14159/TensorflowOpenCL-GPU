@@ -32,6 +32,8 @@
 "ApplyAdamOp<CPUDevice, float>",
 "ArgMaxOp<CPUDevice, float, int64>",
 "AssignOpT<CPUDevice, float>",
+"BiasOp<CPUDevice, float>",
+"BiasGradOp<CPUDevice, float>",
 "BCastGradArgsOp<int32>",
 "CpuCastOp",
 "ConcatV2Op<CPUDevice, ::tensorflow::int32>",
@@ -43,6 +45,7 @@
 "BinaryOp< CPUDevice, functor::equal_to<int64>>",
 "ExpandDimsOp<int32>",
 "FillOp<CPUDevice, float, int32>",
+"UnaryOp< CPUDevice, functor::square<float>>",
 "UnaryOp< CPUDevice, functor::floor<float>>",
 "BinaryOp< CPUDevice, functor::greater<float>>",
 "SummaryHistoOp<float>",
@@ -78,6 +81,8 @@
 "BinaryOp< CPUDevice, functor::sub<float>>",
 "BinaryOp< CPUDevice, functor::sub<int32>>",
 "ReductionOp<CPUDevice, float, int32, Eigen::internal::SumReducer<float>>",
+"UnaryOp< CPUDevice, functor::tanh<float>>",
+"SimpleBinaryOp< CPUDevice, functor::tanh_grad<float>>",
 "TileOp<CPUDevice, int32>",
 "PhiloxRandomOp< CPUDevice, random::TruncatedNormalDistribution< random::SingleSampleAdapter<random::PhiloxRandom>, float>>",
 "VariableOp",
@@ -93,6 +98,8 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "ApplyAdam")
      || isequal(op, "ArgMax")
      || isequal(op, "Assign")
+     || isequal(op, "BiasAdd")
+     || isequal(op, "BiasAddGrad")
      || isequal(op, "BroadcastGradientArgs")
      || isequal(op, "Cast")
      || isequal(op, "Const")
@@ -128,6 +135,7 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "ScalarSummary")
      || isequal(op, "Select")
      || isequal(op, "Shape")
+     || isequal(op, "Square")
      || isequal(op, "ShapeN")
      || isequal(op, "Slice")
      || isequal(op, "Softmax")
@@ -135,6 +143,8 @@ constexpr inline bool ShouldRegisterOp(const char op[]) {
      || isequal(op, "SparseSoftmaxCrossEntropyWithLogits")
      || isequal(op, "Sub")
      || isequal(op, "Sum")
+     || isequal(op, "Tanh")
+     || isequal(op, "TanhGrad")
      || isequal(op, "Tile")
      || isequal(op, "TruncatedNormal")
      || isequal(op, "VariableV2")
