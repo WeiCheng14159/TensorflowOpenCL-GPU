@@ -1,3 +1,6 @@
+#include <string>
+#include <sstream>
+
 #include "tensorflow/core/lib/core/stringpiece.h"
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/public/session.h"
@@ -22,4 +25,12 @@ Status LoadGraph(const string& graph_file_name,
     return session_create_status;
   }
   return Status::OK();
+}
+
+template <typename T>
+std::string to_string(T value)
+{
+    std::ostringstream os ;
+    os << value ;
+    return os.str() ;
 }
