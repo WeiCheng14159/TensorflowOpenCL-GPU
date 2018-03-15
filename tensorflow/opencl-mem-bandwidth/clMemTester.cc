@@ -3,6 +3,7 @@
 #include "clMemTester.h"
 #include <iostream>
 
+// clMemTester constructor
 clMemTester::clMemTester(int num){
   numTests = num;
 }
@@ -42,15 +43,17 @@ cl_int clMemTester::clEnd(){
   return CL_SUCCESS;
 }
 
+// Host to device memory bandwidth test
 cl_int clMemTester::HostToDevice( unsigned long int numBytes )
 {
   // Create host buffer
-  char* hostBufPtr = new char [ numBytes ];
+  char * hostBufPtr = new char [ numBytes ];
   for ( auto i = 0; i < numBytes; i++ )
   {
       hostBufPtr[i] = (i & 0xff);
   }
 
+  // err code init
   err = CL_SUCCESS;
 
   // Create device buffer
@@ -66,7 +69,7 @@ cl_int clMemTester::HostToDevice( unsigned long int numBytes )
 
   timer.start();
 
-  // Copy from host -> device
+  // Write host -> device
   for ( size_t i = 0; i < numTests; i++ )
   {
       // Asynchronous write
@@ -90,15 +93,17 @@ cl_int clMemTester::HostToDevice( unsigned long int numBytes )
   return CL_SUCCESS;
 }
 
+// Device to host memory bandwidth test
 cl_int clMemTester::DeviceToHost( unsigned long int numBytes )
 {
   // Create host buffer
-  char* hostBufPtr = new char [ numBytes ];
+  char * hostBufPtr = new char [ numBytes ];
   for ( auto i = 0; i < numBytes; i++ )
   {
       hostBufPtr[i] = (i & 0xff);
   }
 
+  // err code init
   err = CL_SUCCESS;
 
   // Create device buffer
@@ -115,11 +120,12 @@ cl_int clMemTester::DeviceToHost( unsigned long int numBytes )
 
   timer.start();
 
-  // Copy from host -> device
+  // Read from device -> host
   for ( size_t i = 0; i < numTests; i++ )
   {
-      // Asynchronous write
-      err = clEnqueueReadBuffer( clQueue, deviceBuffer, CL_FALSE, 0, numBytes, hostBufPtr, 0, NULL, NULL );
+      // Asynchronous read
+      err = clEnqueueReadBuffer( clQueue, deviceBuffer, CL_FALSE, 0, numBytes,
+        hostBufPtr, 0, NULL, NULL );
       if (err != CL_SUCCESS )
       {
           std::cerr << "Error writing device buffer";
@@ -138,18 +144,20 @@ cl_int clMemTester::DeviceToHost( unsigned long int numBytes )
   return CL_SUCCESS;
 }
 
+// Device to device memory bandwidth test
 cl_int clMemTester::DeviceToDevice( unsigned long int numBytes )
 {
   // Create host buffer
-  char* hostBufPtr = new char [ numBytes ];
+  char * hostBufPtr = new char [ numBytes ];
   for ( auto i = 0; i < numBytes; i++ )
   {
       hostBufPtr[i] = (i & 0xff);
   }
 
+  // err code init
   err = CL_SUCCESS;
 
-  // Copy the contents of the host buffer into a device buffer
+  // Create a src device buffer
   cl_mem deviceBufferSrc = clCreateBuffer( clCtx,
     CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, numBytes, hostBufPtr, &err );
   if ( err != CL_SUCCESS )
@@ -160,7 +168,7 @@ cl_int clMemTester::DeviceToDevice( unsigned long int numBytes )
       return err;
   }
 
-  // Create another device buffer to copy into
+  // Create a dest device buffer
   cl_mem deviceBufferDst = clCreateBuffer( clCtx, CL_MEM_READ_WRITE, numBytes,
     NULL, &err );
   if ( err != CL_SUCCESS )
@@ -175,7 +183,7 @@ cl_int clMemTester::DeviceToDevice( unsigned long int numBytes )
 
   timer.start();
 
-  // Copy from device -> host
+  // Copy from device -> device
   for ( size_t i = 0; i < numTests; i++ )
   {
       // Asynchronous write
@@ -201,6 +209,7 @@ cl_int clMemTester::DeviceToDevice( unsigned long int numBytes )
   return CL_SUCCESS;
 }
 
+// Memory bandwidth calculator
 void clMemTester::computeBandwidth(size_t numOfBytes, const double& time_us){
 
   double MB = numOfBytes / (1024*1024);

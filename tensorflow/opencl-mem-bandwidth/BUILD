@@ -31,7 +31,7 @@ ANDROID_LINK_OPTS = [
 ]
 
 cc_library(
-  name = "timerLib",
+  name = "timer",
   srcs = [
     "Timer.cc",
   ],
@@ -50,7 +50,7 @@ cc_library(
   ],
   deps = [
     "//external:android_opencl_libs",
-    ":timerLib",
+    ":timer",
   ],
 )
 
