@@ -1,5 +1,6 @@
 #include <sys/time.h>
 #include <time.h>
+#include <random>
 
 #include "tensorflow/core/public/session.h"
 #include "tensorflow/core/graph/default_device.h"
@@ -13,6 +14,11 @@ int main(int argc, char* argv[]) {
       cerr << "expected 2 arguments [Size of Matrix] [Num of Runs]" << endl;
       exit(1);
     }
+
+    // Random generator
+    std::random_device rd;
+    std::default_random_engine gen = std::default_random_engine(rd());
+    std::normal_distribution<> dis{0,5};
 
     // Timers
     struct timeval start, end;
@@ -45,13 +51,13 @@ int main(int argc, char* argv[]) {
     auto Tx_map = Tx.tensor<float, 2>();
     for( int i = 0 ; i < N ; i ++ ){
       for( auto j = 0 ; j < N ; j ++ ){
-        Tx_map(i, j) = (i==j) ? 1.5f : 0.1f;
+        Tx_map(i, j) = dis(gen);
       }
     }
     auto Ty_map = Ty.tensor<float, 2>();
     for( int i = 0 ; i < N ; i ++ ){
       for( auto j = 0 ; j < N ; j ++ ){
-        Ty_map(i, j) = (i!=j) ? 1.5f : 0.1f;
+        Ty_map(i, j) = dis(gen);
       }
     }
 

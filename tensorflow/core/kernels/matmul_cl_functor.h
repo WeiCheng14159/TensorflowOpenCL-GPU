@@ -1,3 +1,18 @@
+// clEngine<float>
+//     |
+//     v
+// clLoaderEngine   <---- binaryLoaderInterface
+//
+// clEngine<float>
+//     |
+//     v
+// clQualcommEngine <---- binaryLoaderInterface
+//
+// clEngine<float>
+//     |
+//     v
+// clBLASTEngine
+
 #ifdef TEST_CL
   #warning "Complied with TEST_CL flag, TF OpenCL matrix multiplaction will be used!"
 #ifndef MATMUL_CL_FUNCTOR_H_
@@ -19,14 +34,13 @@ using namespace std;
 namespace tensorflow {
   typedef Eigen::ThreadPoolDevice CPUDevice;
 
-  // The OpenCL matrix multiplication computer, computing datatype T
+  // clEngine abstract class (interface), computing datatype T
   template<class T> class clEngine {
     public:
 
-      clEngine(){}
-
+    // Concrete methods
       // clEngine initializaiotn function
-      cl_int init(
+      cl_int hostInit(
         typename functor::MatMulTypes<T>::in_type in0,
         typename functor::MatMulTypes<T>::in_type in1)
       {
@@ -45,59 +59,149 @@ namespace tensorflow {
 
         // Query platforms
         err = clGetPlatformIDs(1, &platform, NULL);
-        if( err != CL_SUCCESS )
+        if( err != CL_SUCCESS ){
+          LOG(INFO) << "clGetPlatformIDs fail with code " << err;
           return err;
+        }
 
         // Query devices
         err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &clDevice, NULL);
-        if( err != CL_SUCCESS )
+        if( err != CL_SUCCESS ){
+          LOG(INFO) << "clGetDeviceIDs fail with code " << err;
           return err;
+        }
 
         // Create context
-        clCtx = clCreateContext(NULL, 1, &clDevice, NULL, NULL, NULL);
+        clCtx = clCreateContext(NULL, 1, &clDevice, NULL, NULL, &err);
+        if( err != CL_SUCCESS ){
+          LOG(INFO) << "clCreateContext fail with code " << err;
+          return err;
+        }
 
         // Create command clQueue
-        clQueue = clCreateCommandQueue(clCtx, clDevice, 0, NULL);
+        clQueue = clCreateCommandQueue(clCtx, clDevice, 0, &err);
+        if( err != CL_SUCCESS ){
+          LOG(INFO) << "clCreateCommandQueue fail with code " << err;
+          return err;
+        }
 
         return CL_SUCCESS;
       }
 
-      // Release all OpenCL related resourcse
-      cl_int release(){
+      // Print debug info
+      void debug( bool print=true ){
+        if( print ){
+          LOG(INFO) << "Dealing with datatype of size " << sizeof(T);
+          LOG(INFO) << "in0 = [" << M << "," << K  << "]";
+          LOG(INFO) << "in1 = [" << K << "," << N  << "]";
+          LOG(INFO) << "out = [" << M << "," << N  << "]";
+        }
+      }
 
-        err = CL_SUCCESS;
+      // Print input-output matrices
+      void printMatrix(
+        typename functor::MatMulTypes<T>::in_type in0,
+        typename functor::MatMulTypes<T>::in_type in1,
+        typename functor::MatMulTypes<T>::out_type out)
+      {
+        LOG(INFO) << "MatMul Matrix details";
+        LOG(INFO) << std::endl << in0;
+        LOG(INFO) << std::endl << in1;
+        LOG(INFO) << std::endl << out;
+      }
+
+    // Virtual methods
+      // Release all OpenCL related resourcse
+      virtual cl_int clEnd() = 0;
+
+      // Load computed results back to memroy
+      virtual cl_int memLoad(typename functor::MatMulTypes<T>::out_type out) = 0;
+
+      // OpenCL memeory object init
+      virtual cl_int memInit(
+        typename functor::MatMulTypes<T>::in_type in0,
+        typename functor::MatMulTypes<T>::in_type in1,
+        typename functor::MatMulTypes<T>::out_type out) = 0;
+
+    protected:
+
+      // Default matrix dimension
+      size_t M = 0;
+      size_t N = 0;
+      size_t K = 0;
+
+      // Default matrix size
+      size_t in0_size = 0;
+      size_t in1_size = 0;
+      size_t out_size = 0;
+
+      // OpenCL host side object
+      cl_platform_id platform;
+      cl_device_id clDevice;
+      cl_context clCtx;
+      cl_command_queue clQueue;
+      cl_int err = CL_SUCCESS;
+
+  };  // class clEngine
+
+  // binaryLoaderInterface abstract class (interface)
+  class binaryLoaderInterface{
+    public:
+
+    // Virtual method
+      // Compile & Compute the results
+      virtual cl_int loadFromBinaryCompute(
+        const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair ) = 0;
+
+    protected:
+
+    // Concrete methods
+      // Read OpenCL binary file from disk
+      int read_file(unsigned char **output, size_t *size, const char *name)
+      {
+        FILE* fp = fopen(name, "rb");
+        if (!fp) {
+          LOG(ERROR) << "Fail to read cl kernel binary " << std::string( name );
+          return -1;
+        }
+
+        fseek(fp, 0, SEEK_END);
+        *size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+
+        *output = (unsigned char *)malloc(*size);
+        if (!*output) {
+          fclose(fp);
+          return -1;
+        }
+        fread(*output, *size, 1, fp);
+        fclose(fp);
+        return 0;
+      }
+
+  };  // class binaryLoaderInterface
+
+  // clQualcommEngine concrete class using Qualcomm GEMM example
+  class clQualcommEngine : public binaryLoaderInterface, public clEngine<float>{
+    public:
+
+      cl_int clEnd(){
 
         // Free OpenCL memory objects
         clReleaseMemObject(a);
         clReleaseMemObject(b);
+        clReleaseMemObject(b_T);
         clReleaseMemObject(c);
 
         // Free OpenCL kernel
-        clReleaseKernel(clKernel);
+        clReleaseKernel(clGemmKernel);
+        clReleaseKernel(clTransKernel);
 
         // Free OpenCL program
         clReleaseProgram(clProgram);
 
-        // Free OpenCL kernel
-        err = clReleaseKernel(clKernel);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clReleaseKernel fail with code " << err;
-          return err;
-        }
-
-        // Free OpenCL program
-        err = clReleaseProgram(clProgram);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clReleaseProgram fail with code " << err;
-          return err;
-        }
-
         // Free OpenCL command queue
-        err = clReleaseCommandQueue(clQueue);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clReleaseCommandQueue fail with code " << err;
-          return err;
-        }
+        clReleaseCommandQueue(clQueue);
 
         // Free OpenCL context
         clReleaseContext(clCtx);
@@ -106,14 +210,12 @@ namespace tensorflow {
         clReleaseEvent(kernel_event);
         clReleaseEvent(writeBuffer_events[0]);
         clReleaseEvent(writeBuffer_events[1]);
-        clReleaseEvent(writeBuffer_events[2]);
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
       }
 
-      // Load computed results back to memroy
-      cl_int mem_load(typename functor::MatMulTypes<T>::out_type out){
+      cl_int memLoad(typename functor::MatMulTypes<float>::out_type out){
 
         // Init cl err code
         err = CL_SUCCESS;
@@ -126,9 +228,9 @@ namespace tensorflow {
         }
 
         // Release OpenCL resources
-        err = release();
+        err = clEnd();
         if( err != CL_SUCCESS ){
-          LOG(ERROR) << "release() fail with code " << err;
+          LOG(ERROR) << "clEnd() fail with code " << err;
           return err;
         }
 
@@ -136,11 +238,213 @@ namespace tensorflow {
         return CL_SUCCESS;
       }
 
-      // OpenCL memeory object init
-      cl_int mem_init(
-        typename functor::MatMulTypes<T>::in_type in0,
-        typename functor::MatMulTypes<T>::in_type in1,
-        typename functor::MatMulTypes<T>::out_type out)
+      cl_int memInit(
+        typename functor::MatMulTypes<float>::in_type in0,
+        typename functor::MatMulTypes<float>::in_type in1,
+        typename functor::MatMulTypes<float>::out_type out)
+      {
+
+        // Init cl err code
+        err = CL_SUCCESS;
+
+        // Allocate memory buffers
+        a = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in0_size, NULL, NULL);
+        b = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in1_size, NULL, NULL);
+        b_T = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, in1_size, NULL, NULL);
+        c = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, out_size, NULL, NULL);
+
+        // Enqueue write buffer commands (acynchronous write)
+        err = clEnqueueWriteBuffer(clQueue, a, CL_FALSE, 0, in0_size, in0.data(),
+                                   0, NULL, &writeBuffer_events[0]);
+        if( err != CL_SUCCESS ){ return err; }
+
+        err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
+                                   0, NULL, &writeBuffer_events[1]);
+        if( err != CL_SUCCESS ){ return err; }
+
+        // Wait for completion
+        clWaitForEvents(2, writeBuffer_events);
+        return CL_SUCCESS;
+      }
+
+      cl_int loadFromBinaryCompute(
+        const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair )
+      {
+        // Init cl err code
+        err = CL_SUCCESS;
+
+        unsigned char* clKernelBinaryFile = NULL;
+        size_t clKernelBinSize = 0;
+        // Read compiled OpenCL kernel binary file from disk
+        read_file(&clKernelBinaryFile, &clKernelBinSize, "matmul.bin" );
+
+        // Create an OpenCL program object from binary
+        clProgram =
+          clCreateProgramWithBinary(clCtx, 1, &clDevice, &clKernelBinSize,
+                                  (const unsigned char **)&clKernelBinaryFile,
+                                  NULL, &err);
+
+        free(clKernelBinaryFile);
+
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clCreateProgramWithBinary fail with code " << err;
+          return err;
+        }
+
+        // OpenCL build program
+        err = clBuildProgram(clProgram, 1, &clDevice, NULL , NULL, NULL);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clBuildProgram fail with code " << err;
+          return err;
+        }
+
+        // Create OpenCL GEMM kernel obj
+        clGemmKernel = clCreateKernel(clProgram, "MatrixMatrixMulOptimized" , &err);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clCreateKernel fail with code " << err;
+          return err;
+        }
+
+        // Create OpenCL Transpose kernel obj
+        clTransKernel = clCreateKernel(clProgram, "MatrixTranspose" , &err);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clCreateKernel fail with code " << err;
+          return err;
+        }
+
+        // Transose B -> B^T
+        // Set OpenCL kernel arguments
+        if (
+          clSetKernelArg(clTransKernel, 0, sizeof(int), &K) != CL_SUCCESS ||
+          clSetKernelArg(clTransKernel, 1, sizeof(int), &N) != CL_SUCCESS ||
+          clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &b) != CL_SUCCESS ||
+          clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &b_T) != CL_SUCCESS
+        ){
+          LOG(ERROR) << "clSetKernelArg fail";
+          return CL_FALSE;
+        }
+
+        // OpenCL enqueue kernel
+        err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                                     &K, NULL, 0, NULL, &kernel_event);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+          return err;
+        }
+
+        // Wait for kernel computation
+        clWaitForEvents(1, &kernel_event);
+
+        // Set OpenCL kernel arguments
+        if (
+          clSetKernelArg(clGemmKernel, 0, sizeof(int), &M) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 1, sizeof(int), &N) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 2, sizeof(int), &K) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b_T) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 6, K * sizeof(float), NULL) != CL_SUCCESS
+        ){
+          LOG(ERROR) << "clSetKernelArg fail";
+          return CL_FALSE;
+        }
+
+        // OpenCL enqueue kernel
+        const size_t global = M;
+        const size_t local = 16;
+
+        err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                                     &global, &local, 0, NULL, &kernel_event);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+          return err;
+        }
+
+        // Wait for kernel computation
+        clWaitForEvents(1, &kernel_event);
+        return CL_SUCCESS;
+      }
+
+    private:
+
+      // OpenCL memeory object
+      cl_mem a;
+      cl_mem b;
+      cl_mem b_T;
+      cl_mem c;
+
+      // OpenCL events
+      cl_event kernel_event;
+      cl_event writeBuffer_events[2];
+
+      // OpenCL program object
+      cl_program clProgram;
+
+      // OpenCL kernel object
+      cl_kernel clGemmKernel;
+      cl_kernel clTransKernel;
+
+  };  // class clQualcommEngine
+
+  // clLoaderEngine concrete class using customized cl kernel
+  class clLoaderEngine : public binaryLoaderInterface, public clEngine<float>{
+    public:
+
+      cl_int clEnd(){
+
+        // Free OpenCL memory objects
+        clReleaseMemObject(a);
+        clReleaseMemObject(b);
+        clReleaseMemObject(c);
+
+        // Free OpenCL kernel
+        clReleaseKernel(clGemmKernel);
+
+        // Free OpenCL program
+        clReleaseProgram(clProgram);
+
+        // Free OpenCL command queue
+        clReleaseCommandQueue(clQueue);
+
+        // Free OpenCL context
+        clReleaseContext(clCtx);
+
+        // Free OpenCL events
+        clReleaseEvent(kernel_event);
+        clReleaseEvent(writeBuffer_events[0]);
+        clReleaseEvent(writeBuffer_events[1]);
+
+        // Return CL_SUCCESS if all resources are released successfully
+        return CL_SUCCESS;
+      }
+
+      cl_int memLoad(typename functor::MatMulTypes<float>::out_type out){
+
+        // Init cl err code
+        err = CL_SUCCESS;
+
+        // Read results
+        err = clEnqueueReadBuffer(clQueue, c, CL_TRUE, 0, out_size, out.data(), 0, NULL, NULL);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnqueueReadBuffer fail with code " << err;
+          return err;
+        }
+
+        // Release OpenCL resources
+        err = clEnd();
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnd() fail with code " << err;
+          return err;
+        }
+
+        // Return if the results are loaded to memory & OpenCL resources are released
+        return CL_SUCCESS;
+      }
+
+      cl_int memInit(
+        typename functor::MatMulTypes<float>::in_type in0,
+        typename functor::MatMulTypes<float>::in_type in1,
+        typename functor::MatMulTypes<float>::out_type out)
       {
 
         // Init cl err code
@@ -159,25 +463,22 @@ namespace tensorflow {
         err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
                                    0, NULL, &writeBuffer_events[1]);
         if( err != CL_SUCCESS ){ return err; }
-          // Write to buffer c to cverwrite previous results
-        err = clEnqueueWriteBuffer(clQueue, c, CL_FALSE, 0, out_size, out.data(),
-                                   0, NULL, &writeBuffer_events[2]);
-        if( err != CL_SUCCESS ){ return err; }
 
         // Wait for completion
-        clWaitForEvents(3, writeBuffer_events);
+        clWaitForEvents(2, writeBuffer_events);
         return CL_SUCCESS;
       }
 
-      // Compile & Compute the results
-      cl_int clLoadFromBinaryCompute()
+      cl_int loadFromBinaryCompute(
+        const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair )
       {
+        // Init cl err code
         err = CL_SUCCESS;
 
         unsigned char* clKernelBinaryFile = NULL;
         size_t clKernelBinSize = 0;
         // Read compiled OpenCL kernel binary file from disk
-        read_file(&clKernelBinaryFile, &clKernelBinSize, clKernelBinName.c_str() );
+        read_file(&clKernelBinaryFile, &clKernelBinSize, "matmul.bin" );
 
         // Create an OpenCL program object from binary
         clProgram =
@@ -196,30 +497,31 @@ namespace tensorflow {
           return err;
         }
 
-        // Create OpenCL kernel obj
-        clKernel = clCreateKernel(clProgram, clKernelFuncName.c_str() , &err);
+        // Create OpenCL GEMM kernel obj
+        clGemmKernel = clCreateKernel(clProgram, "GEMM" , &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateKernel fail with code " << err;
           return err;
         }
 
         // Set OpenCL kernel arguments
-        err = clSetKernelArg(clKernel, 0, sizeof(int), &M);
-        err = clSetKernelArg(clKernel, 1, sizeof(int), &N);
-        err = clSetKernelArg(clKernel, 2, sizeof(int), &K);
-        err = clSetKernelArg(clKernel, 3, sizeof(cl_mem), &a);
-        err = clSetKernelArg(clKernel, 4, sizeof(cl_mem), &b);
-        err = clSetKernelArg(clKernel, 5, sizeof(cl_mem), &c);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clSetKernelArg fail with code " << err;
-          return err;
+        if (
+          clSetKernelArg(clGemmKernel, 0, sizeof(int), &M) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 1, sizeof(int), &N) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 2, sizeof(int), &K) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS
+        ){
+          LOG(ERROR) << "clSetKernelArg fail";
         }
 
         // OpenCL enqueue kernel
         const int TS = 16;
-        const size_t local[2] = { TS, TS };
-        const size_t global[2] = { M, N };
-        err = clEnqueueNDRangeKernel(clQueue, clKernel, 2, NULL,
+        const size_t global[2] = {M, N};
+        const size_t local[2] = {TS, TS};
+
+        err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 2, NULL,
                                      global, local, 0, NULL, &kernel_event);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
@@ -231,7 +533,102 @@ namespace tensorflow {
         return CL_SUCCESS;
       }
 
-      // Compile & Compute the results
+    private:
+
+      // OpenCL memeory object
+      cl_mem a;
+      cl_mem b;
+      cl_mem c;
+
+      // OpenCL events
+      cl_event kernel_event;
+      cl_event writeBuffer_events[2];
+
+      // OpenCL program object
+      cl_program clProgram;
+
+      // OpenCL kernel object
+      cl_kernel clGemmKernel;
+
+  };  // class clLoaderEngine
+
+  // clBLASTEngine concrete class using CLBLAST API
+  class clBLASTEngine : public clEngine<float>{
+    public:
+
+      cl_int clEnd(){
+
+        // Free OpenCL memory objects
+        clReleaseMemObject(a);
+        clReleaseMemObject(b);
+        clReleaseMemObject(c);
+
+        // Free OpenCL command queue
+        clReleaseCommandQueue(clQueue);
+
+        // Free OpenCL context
+        clReleaseContext(clCtx);
+
+        // Free OpenCL events
+        clReleaseEvent(kernel_event);
+        clReleaseEvent(writeBuffer_events[0]);
+        clReleaseEvent(writeBuffer_events[1]);
+
+        // Return CL_SUCCESS if all resources are released successfully
+        return CL_SUCCESS;
+      }
+
+      cl_int memLoad(typename functor::MatMulTypes<float>::out_type out){
+
+        // Init cl err code
+        err = CL_SUCCESS;
+
+        // Read results
+        err = clEnqueueReadBuffer(clQueue, c, CL_TRUE, 0, out_size, out.data(), 0, NULL, NULL);
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnqueueReadBuffer fail with code " << err;
+          return err;
+        }
+
+        // Release OpenCL resources
+        err = clEnd();
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnd() fail with code " << err;
+          return err;
+        }
+
+        // Return if the results are loaded to memory & OpenCL resources are released
+        return CL_SUCCESS;
+      }
+
+      cl_int memInit(
+        typename functor::MatMulTypes<float>::in_type in0,
+        typename functor::MatMulTypes<float>::in_type in1,
+        typename functor::MatMulTypes<float>::out_type out)
+      {
+
+        // Init cl err code
+        err = CL_SUCCESS;
+
+        // Allocate memory buffers
+        a = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in0_size, NULL, NULL);
+        b = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in1_size, NULL, NULL);
+        c = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, out_size, NULL, NULL);
+
+        // Enqueue write buffer commands (acynchronous write)
+        err = clEnqueueWriteBuffer(clQueue, a, CL_FALSE, 0, in0_size, in0.data(),
+                                   0, NULL, &writeBuffer_events[0]);
+        if( err != CL_SUCCESS ){ return err; }
+
+        err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
+                                   0, NULL, &writeBuffer_events[1]);
+        if( err != CL_SUCCESS ){ return err; }
+
+        // Wait for completion
+        clWaitForEvents(2, writeBuffer_events);
+        return CL_SUCCESS;
+      }
+
       cl_int clBlastCompute(
         const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair )
       {
@@ -267,8 +664,8 @@ namespace tensorflow {
         const size_t c_ld = N;
 
         // Performs the matrix product C = alpha * A * B + beta * C
-        const T alpha = 1.0f;
-        const T beta = 0.0f;
+        const float alpha = 1.0f;
+        const float beta = 0.0f;
 
         // Call the SGEMM routine.
         CLBlastStatusCode status = CLBlastSgemm(CLBlastLayoutRowMajor,
@@ -291,46 +688,7 @@ namespace tensorflow {
         return CL_SUCCESS;
       }
 
-      // Print debug info
-      void debug( bool print=true ){
-        if( print ){
-          LOG(INFO) << "Dealing with datatype of size " << sizeof(T);
-          LOG(INFO) << "in0 = [" << M << "," << K  << "]";
-          LOG(INFO) << "in1 = [" << K << "," << N  << "]";
-          LOG(INFO) << "out = [" << M << "," << N  << "]";
-        }
-      }
-
-      // Print input output matrices
-      void printMatrix(
-        typename functor::MatMulTypes<T>::in_type in0,
-        typename functor::MatMulTypes<T>::in_type in1,
-        typename functor::MatMulTypes<T>::out_type out)
-      {
-        LOG(INFO) << "MatMul Matrix details";
-        LOG(INFO) << std::endl << in0;
-        LOG(INFO) << std::endl << in1;
-        LOG(INFO) << std::endl << out;
-      }
-
     private:
-
-      // Default matrix dimension
-      size_t M = 0;
-      size_t N = 0;
-      size_t K = 0;
-
-      // Default matrix size
-      size_t in0_size = 0;
-      size_t in1_size = 0;
-      size_t out_size = 0;
-
-      // OpenCL host side object
-      cl_platform_id platform;
-      cl_device_id clDevice;
-      cl_context clCtx;
-      cl_command_queue clQueue;
-      cl_int err = CL_SUCCESS;
 
       // OpenCL memeory object
       cl_mem a;
@@ -339,41 +697,9 @@ namespace tensorflow {
 
       // OpenCL events
       cl_event kernel_event;
-      cl_event writeBuffer_events[3];
+      cl_event writeBuffer_events[2];
 
-      // OpenCL binary name. When loading OpenCL compiled binary from disk
-      std::string clKernelBinName = "matmul.bin";
-      std::string clKernelFuncName = "GEMM";
-
-      // OpenCL kernel object
-      cl_kernel clKernel;
-
-      // OpenCL program object
-      cl_program clProgram;
-
-      // Read OpenCL binary file from disk
-      int read_file(unsigned char **output, size_t *size, const char *name) {
-        FILE* fp = fopen(name, "rb");
-        if (!fp) {
-          LOG(ERROR) << "Fail to read cl kernel binary " << std::string( name );
-        }
-
-        fseek(fp, 0, SEEK_END);
-        *size = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-
-        *output = (unsigned char *)malloc(*size);
-        if (!*output) {
-          fclose(fp);
-          return -1;
-        }
-
-        fread(*output, *size, 1, fp);
-        fclose(fp);
-        return 0;
-      }
-
-  };  // class clEngine
+  };  // class clBLASTEngine
 
 namespace functor {
 
@@ -414,14 +740,15 @@ namespace functor {
         const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair)
       {
 
-      // Init clEngine with type float
-      clEngine<float> c = clEngine<float>();
+      clLoaderEngine c = clLoaderEngine();
+      // clBLASTEngine c = clBLASTEngine();
+      // clQualcommEngine c = clQualcommEngine();
 
       // Init cl status
       cl_int status = CL_SUCCESS;
 
       // OpenCL host & device side initializaiotn
-      status = c.init(in0, in1);
+      status = c.hostInit(in0, in1);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL init fail with code " << status;
       }
@@ -430,20 +757,20 @@ namespace functor {
       // c.debug(true);
 
       // OpenCL memeory obj init & memory copy
-      status = c.mem_init(in0, in1, out);
+      status = c.memInit(in0, in1, out);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL mem init fail with code " << status;
       }
 
       // GEMM computation
-      status = c.clLoadFromBinaryCompute();
+      status = c.loadFromBinaryCompute(dim_pair);
       // status = c.clBlastCompute(dim_pair);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL compute fail with code " << status;
       }
 
       // OpenCL memory load
-      status = c.mem_load(out);
+      status = c.memLoad(out);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL memeory load fail with code " << status;
       }
