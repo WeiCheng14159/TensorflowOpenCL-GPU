@@ -1,3 +1,18 @@
+// clEngine<float>
+//     |
+//     v
+// clLoaderEngine   <---- binaryLoaderInterface
+//
+// clEngine<float>
+//     |
+//     v
+// clQualcommEngine <---- binaryLoaderInterface
+//
+// clEngine<float>
+//     |
+//     v
+// clBLASTEngine
+
 #ifdef TEST_CL
   #warning "Complied with TEST_CL flag, TF OpenCL matrix multiplaction will be used!"
 #ifndef MATMUL_CL_FUNCTOR_H_
@@ -44,19 +59,31 @@ namespace tensorflow {
 
         // Query platforms
         err = clGetPlatformIDs(1, &platform, NULL);
-        if( err != CL_SUCCESS )
+        if( err != CL_SUCCESS ){
+          LOG(INFO) << "clGetPlatformIDs fail with code " << err;
           return err;
+        }
 
         // Query devices
         err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &clDevice, NULL);
-        if( err != CL_SUCCESS )
+        if( err != CL_SUCCESS ){
+          LOG(INFO) << "clGetDeviceIDs fail with code " << err;
           return err;
+        }
 
         // Create context
-        clCtx = clCreateContext(NULL, 1, &clDevice, NULL, NULL, NULL);
+        clCtx = clCreateContext(NULL, 1, &clDevice, NULL, NULL, &err);
+        if( err != CL_SUCCESS ){
+          LOG(INFO) << "clCreateContext fail with code " << err;
+          return err;
+        }
 
         // Create command clQueue
-        clQueue = clCreateCommandQueue(clCtx, clDevice, 0, NULL);
+        clQueue = clCreateCommandQueue(clCtx, clDevice, 0, &err);
+        if( err != CL_SUCCESS ){
+          LOG(INFO) << "clCreateCommandQueue fail with code " << err;
+          return err;
+        }
 
         return CL_SUCCESS;
       }
@@ -135,6 +162,7 @@ namespace tensorflow {
         FILE* fp = fopen(name, "rb");
         if (!fp) {
           LOG(ERROR) << "Fail to read cl kernel binary " << std::string( name );
+          return -1;
         }
 
         fseek(fp, 0, SEEK_END);
@@ -182,7 +210,6 @@ namespace tensorflow {
         clReleaseEvent(kernel_event);
         clReleaseEvent(writeBuffer_events[0]);
         clReleaseEvent(writeBuffer_events[1]);
-        clReleaseEvent(writeBuffer_events[2]);
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -234,13 +261,9 @@ namespace tensorflow {
         err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
                                    0, NULL, &writeBuffer_events[1]);
         if( err != CL_SUCCESS ){ return err; }
-          // Write to buffer c to cverwrite previous results
-        err = clEnqueueWriteBuffer(clQueue, c, CL_FALSE, 0, out_size, out.data(),
-                                   0, NULL, &writeBuffer_events[2]);
-        if( err != CL_SUCCESS ){ return err; }
 
         // Wait for completion
-        clWaitForEvents(3, writeBuffer_events);
+        clWaitForEvents(2, writeBuffer_events);
         return CL_SUCCESS;
       }
 
@@ -253,13 +276,16 @@ namespace tensorflow {
         unsigned char* clKernelBinaryFile = NULL;
         size_t clKernelBinSize = 0;
         // Read compiled OpenCL kernel binary file from disk
-        read_file(&clKernelBinaryFile, &clKernelBinSize, clKernelBinName.c_str() );
+        read_file(&clKernelBinaryFile, &clKernelBinSize, "matmul.bin" );
 
         // Create an OpenCL program object from binary
         clProgram =
           clCreateProgramWithBinary(clCtx, 1, &clDevice, &clKernelBinSize,
                                   (const unsigned char **)&clKernelBinaryFile,
                                   NULL, &err);
+
+        free(clKernelBinaryFile);
+
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateProgramWithBinary fail with code " << err;
           return err;
@@ -273,14 +299,14 @@ namespace tensorflow {
         }
 
         // Create OpenCL GEMM kernel obj
-        clGemmKernel = clCreateKernel(clProgram, clGemmKernelFuncName.c_str() , &err);
+        clGemmKernel = clCreateKernel(clProgram, "MatrixMatrixMulOptimized" , &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateKernel fail with code " << err;
           return err;
         }
 
         // Create OpenCL Transpose kernel obj
-        clTransKernel = clCreateKernel(clProgram, clTransKernelFuncName.c_str() , &err);
+        clTransKernel = clCreateKernel(clProgram, "MatrixTranspose" , &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateKernel fail with code " << err;
           return err;
@@ -295,6 +321,7 @@ namespace tensorflow {
           clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &b_T) != CL_SUCCESS
         ){
           LOG(ERROR) << "clSetKernelArg fail";
+          return CL_FALSE;
         }
 
         // OpenCL enqueue kernel
@@ -319,14 +346,13 @@ namespace tensorflow {
           clSetKernelArg(clGemmKernel, 6, K * sizeof(float), NULL) != CL_SUCCESS
         ){
           LOG(ERROR) << "clSetKernelArg fail";
+          return CL_FALSE;
         }
 
         // OpenCL enqueue kernel
         const size_t global = M;
         const size_t local = 16;
-        // Under global = M, local = 16. ./opencl-matmul 512 10
-        // matrixTranspose alone takes 18K us, matrixMul takes 45K, total 63K
-        // CPU result = 49K
+
         err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
                                      &global, &local, 0, NULL, &kernel_event);
         if( err != CL_SUCCESS ){
@@ -349,15 +375,10 @@ namespace tensorflow {
 
       // OpenCL events
       cl_event kernel_event;
-      cl_event writeBuffer_events[3];
+      cl_event writeBuffer_events[2];
 
       // OpenCL program object
       cl_program clProgram;
-
-      // OpenCL binary name. When loading OpenCL compiled binary from disk
-      std::string clKernelBinName = "matmul.bin";
-      std::string clGemmKernelFuncName = "MatrixMatrixMulOptimized";
-      std::string clTransKernelFuncName = "MatrixTranspose";
 
       // OpenCL kernel object
       cl_kernel clGemmKernel;
@@ -392,7 +413,6 @@ namespace tensorflow {
         clReleaseEvent(kernel_event);
         clReleaseEvent(writeBuffer_events[0]);
         clReleaseEvent(writeBuffer_events[1]);
-        clReleaseEvent(writeBuffer_events[2]);
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -443,10 +463,6 @@ namespace tensorflow {
         err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
                                    0, NULL, &writeBuffer_events[1]);
         if( err != CL_SUCCESS ){ return err; }
-          // Write to buffer c to cverwrite previous results
-        err = clEnqueueWriteBuffer(clQueue, c, CL_FALSE, 0, out_size, out.data(),
-                                   0, NULL, &writeBuffer_events[2]);
-        if( err != CL_SUCCESS ){ return err; }
 
         // Wait for completion
         clWaitForEvents(2, writeBuffer_events);
@@ -462,7 +478,7 @@ namespace tensorflow {
         unsigned char* clKernelBinaryFile = NULL;
         size_t clKernelBinSize = 0;
         // Read compiled OpenCL kernel binary file from disk
-        read_file(&clKernelBinaryFile, &clKernelBinSize, clKernelBinName.c_str() );
+        read_file(&clKernelBinaryFile, &clKernelBinSize, "matmul.bin" );
 
         // Create an OpenCL program object from binary
         clProgram =
@@ -482,7 +498,7 @@ namespace tensorflow {
         }
 
         // Create OpenCL GEMM kernel obj
-        clGemmKernel = clCreateKernel(clProgram, clGemmKernelFuncName.c_str() , &err);
+        clGemmKernel = clCreateKernel(clProgram, "GEMM" , &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateKernel fail with code " << err;
           return err;
@@ -526,14 +542,10 @@ namespace tensorflow {
 
       // OpenCL events
       cl_event kernel_event;
-      cl_event writeBuffer_events[3];
+      cl_event writeBuffer_events[2];
 
       // OpenCL program object
       cl_program clProgram;
-
-      // OpenCL binary name. When loading OpenCL compiled binary from disk
-      std::string clKernelBinName = "matmul.bin";
-      std::string clGemmKernelFuncName = "GEMM";
 
       // OpenCL kernel object
       cl_kernel clGemmKernel;
@@ -561,7 +573,6 @@ namespace tensorflow {
         clReleaseEvent(kernel_event);
         clReleaseEvent(writeBuffer_events[0]);
         clReleaseEvent(writeBuffer_events[1]);
-        clReleaseEvent(writeBuffer_events[2]);
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -612,13 +623,9 @@ namespace tensorflow {
         err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
                                    0, NULL, &writeBuffer_events[1]);
         if( err != CL_SUCCESS ){ return err; }
-          // Write to buffer c to cverwrite previous results
-        err = clEnqueueWriteBuffer(clQueue, c, CL_FALSE, 0, out_size, out.data(),
-                                   0, NULL, &writeBuffer_events[2]);
-        if( err != CL_SUCCESS ){ return err; }
 
         // Wait for completion
-        clWaitForEvents(3, writeBuffer_events);
+        clWaitForEvents(2, writeBuffer_events);
         return CL_SUCCESS;
       }
 
@@ -690,7 +697,7 @@ namespace tensorflow {
 
       // OpenCL events
       cl_event kernel_event;
-      cl_event writeBuffer_events[3];
+      cl_event writeBuffer_events[2];
 
   };  // class clBLASTEngine
 
@@ -733,9 +740,9 @@ namespace functor {
         const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair)
       {
 
-      // clLoaderEngine c = clLoaderEngine();
+      clLoaderEngine c = clLoaderEngine();
       // clBLASTEngine c = clBLASTEngine();
-      clQualcommEngine c = clQualcommEngine();
+      // clQualcommEngine c = clQualcommEngine();
 
       // Init cl status
       cl_int status = CL_SUCCESS;
