@@ -243,6 +243,7 @@ namespace tensorflow {
         clReleaseContext(clCtx);
 
         // Free OpenCL events
+        clReleaseEvent(transKernelEvent);
         clReleaseEvent(kernel_event);
         clReleaseEvent(writeBuffer_events[0]);
         clReleaseEvent(writeBuffer_events[1]);
@@ -362,14 +363,11 @@ namespace tensorflow {
 
         // OpenCL enqueue kernel
         err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
-                                     &K, NULL, 0, NULL, &kernel_event);
+                                     &K, NULL, 0, NULL, &transKernelEvent);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
           return err;
         }
-
-        // Wait for kernel computation
-        clWaitForEvents(1, &kernel_event);
 
         // Set OpenCL kernel arguments
         if (
@@ -390,7 +388,7 @@ namespace tensorflow {
         const size_t local = 16;
 
         err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
-                                     &global, &local, 0, NULL, &kernel_event);
+                                     &global, &local, 1, &transKernelEvent, &kernel_event);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
           return err;
@@ -411,6 +409,7 @@ namespace tensorflow {
 
       // OpenCL events
       cl_event kernel_event;
+      cl_event transKernelEvent;
       cl_event writeBuffer_events[2];
 
       // OpenCL program object
