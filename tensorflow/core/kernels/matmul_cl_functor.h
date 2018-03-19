@@ -244,9 +244,9 @@ namespace tensorflow {
 
         // Free OpenCL events
         clReleaseEvent(transKernelEvent);
-        clReleaseEvent(kernel_event);
-        clReleaseEvent(writeBuffer_events[0]);
-        clReleaseEvent(writeBuffer_events[1]);
+        clReleaseEvent(gemmKernelEvent);
+        clReleaseEvent(writeBufferEvents[0]);
+        clReleaseEvent(writeBufferEvents[1]);
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -292,15 +292,15 @@ namespace tensorflow {
 
         // Enqueue write buffer commands (acynchronous write)
         err = clEnqueueWriteBuffer(clQueue, a, CL_FALSE, 0, in0_size, in0.data(),
-                                   0, NULL, &writeBuffer_events[0]);
+                                   0, NULL, &writeBufferEvents[0]);
         if( err != CL_SUCCESS ){ return err; }
 
         err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
-                                   0, NULL, &writeBuffer_events[1]);
+                                   0, NULL, &writeBufferEvents[1]);
         if( err != CL_SUCCESS ){ return err; }
 
         // Wait for completion
-        clWaitForEvents(2, writeBuffer_events);
+        clWaitForEvents(2, writeBufferEvents);
         return CL_SUCCESS;
       }
 
@@ -387,14 +387,14 @@ namespace tensorflow {
         // OpenCL enqueue kernel
         const size_t global = M;
         err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
-                                     &global, NULL, 1, &transKernelEvent, &kernel_event);
+                                     &global, NULL, 1, &transKernelEvent, &gemmKernelEvent);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
           return err;
         }
 
         // Wait for kernel computation
-        clWaitForEvents(1, &kernel_event);
+        clWaitForEvents(1, &gemmKernelEvent);
         return CL_SUCCESS;
       }
 
@@ -407,9 +407,9 @@ namespace tensorflow {
       cl_mem c;
 
       // OpenCL events
-      cl_event kernel_event;
+      cl_event gemmKernelEvent;
       cl_event transKernelEvent;
-      cl_event writeBuffer_events[2];
+      cl_event writeBufferEvents[2];
 
       // OpenCL program object
       cl_program clProgram;
@@ -444,9 +444,9 @@ namespace tensorflow {
         clReleaseContext(clCtx);
 
         // Free OpenCL events
-        clReleaseEvent(kernel_event);
-        clReleaseEvent(writeBuffer_events[0]);
-        clReleaseEvent(writeBuffer_events[1]);
+        clReleaseEvent(gemmKernelEvent);
+        clReleaseEvent(writeBufferEvents[0]);
+        clReleaseEvent(writeBufferEvents[1]);
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -491,15 +491,15 @@ namespace tensorflow {
 
         // Enqueue write buffer commands (acynchronous write)
         err = clEnqueueWriteBuffer(clQueue, a, CL_FALSE, 0, in0_size, in0.data(),
-                                   0, NULL, &writeBuffer_events[0]);
+                                   0, NULL, &writeBufferEvents[0]);
         if( err != CL_SUCCESS ){ return err; }
 
         err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
-                                   0, NULL, &writeBuffer_events[1]);
+                                   0, NULL, &writeBufferEvents[1]);
         if( err != CL_SUCCESS ){ return err; }
 
         // Wait for completion
-        clWaitForEvents(2, writeBuffer_events);
+        clWaitForEvents(2, writeBufferEvents);
         return CL_SUCCESS;
       }
 
@@ -553,14 +553,14 @@ namespace tensorflow {
         // OpenCL enqueue kernel
         const size_t global[2] = {M, N};
         err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 2, NULL,
-                                     global, NULL, 0, NULL, &kernel_event);
+                                     global, NULL, 0, NULL, &gemmKernelEvent);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
           return err;
         }
 
         // Wait for kernel computation
-        clWaitForEvents(1, &kernel_event);
+        clWaitForEvents(1, &gemmKernelEvent);
         return CL_SUCCESS;
       }
 
@@ -572,8 +572,8 @@ namespace tensorflow {
       cl_mem c;
 
       // OpenCL events
-      cl_event kernel_event;
-      cl_event writeBuffer_events[2];
+      cl_event gemmKernelEvent;
+      cl_event writeBufferEvents[2];
 
       // OpenCL program object
       cl_program clProgram;
@@ -601,9 +601,9 @@ namespace tensorflow {
         clReleaseContext(clCtx);
 
         // Free OpenCL events
-        clReleaseEvent(kernel_event);
-        clReleaseEvent(writeBuffer_events[0]);
-        clReleaseEvent(writeBuffer_events[1]);
+        clReleaseEvent(gemmKernelEvent);
+        clReleaseEvent(writeBufferEvents[0]);
+        clReleaseEvent(writeBufferEvents[1]);
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -648,15 +648,15 @@ namespace tensorflow {
 
         // Enqueue write buffer commands (acynchronous write)
         err = clEnqueueWriteBuffer(clQueue, a, CL_FALSE, 0, in0_size, in0.data(),
-                                   0, NULL, &writeBuffer_events[0]);
+                                   0, NULL, &writeBufferEvents[0]);
         if( err != CL_SUCCESS ){ return err; }
 
         err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
-                                   0, NULL, &writeBuffer_events[1]);
+                                   0, NULL, &writeBufferEvents[1]);
         if( err != CL_SUCCESS ){ return err; }
 
         // Wait for completion
-        clWaitForEvents(2, writeBuffer_events);
+        clWaitForEvents(2, writeBufferEvents);
         return CL_SUCCESS;
       }
 
@@ -707,7 +707,7 @@ namespace tensorflow {
                                                 b, 0, b_ld,
                                                 beta,
                                                 c, 0, c_ld,
-                                                &clQueue, &kernel_event);
+                                                &clQueue, &gemmKernelEvent);
 
         // Wait for completion
         if (status != CLBlastSuccess){
@@ -715,7 +715,7 @@ namespace tensorflow {
           return CL_FALSE;
         }
 
-        clWaitForEvents(1, &kernel_event);
+        clWaitForEvents(1, &gemmKernelEvent);
         return CL_SUCCESS;
       }
 
@@ -727,8 +727,8 @@ namespace tensorflow {
       cl_mem c;
 
       // OpenCL events
-      cl_event kernel_event;
-      cl_event writeBuffer_events[2];
+      cl_event gemmKernelEvent;
+      cl_event writeBufferEvents[2];
 
   };  // class clBLASTEngine
 
