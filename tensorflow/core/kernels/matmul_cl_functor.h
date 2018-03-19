@@ -179,6 +179,42 @@ namespace tensorflow {
         return 0;
       }
 
+      void debugOpenclKernel(cl_kernel cl_kernel, cl_device_id cl_device){
+
+        // Kernel info
+        size_t wgSize = 0;
+        size_t compiledWgSize[3];
+        cl_ulong localMemSize = 0;
+        size_t perfHint;
+        cl_ulong privateMemSize = 0;
+
+        if(
+          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_WORK_GROUP_SIZE,
+            sizeof(size_t), &wgSize, NULL) != CL_SUCCESS                      ||
+          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_COMPILE_WORK_GROUP_SIZE,
+            3 * sizeof(size_t), &compiledWgSize, NULL) != CL_SUCCESS          ||
+          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_LOCAL_MEM_SIZE,
+            sizeof(cl_ulong), &localMemSize, NULL) != CL_SUCCESS              ||
+          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
+            sizeof(size_t), &perfHint, NULL) != CL_SUCCESS                    ||
+          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_PRIVATE_MEM_SIZE,
+            sizeof(cl_ulong), &privateMemSize, NULL) != CL_SUCCESS
+          ){
+            printf("debugOpenclKernel fail\n");
+          }else{
+            printf("\
+               CL_KERNEL_WORK_GROUP_SIZE %zu,\n \
+              CL_KERNEL_COMPILE_WORK_GROUP_SIZE [%zu,%zu,%zu],\n \
+              CL_KERNEL_LOCAL_MEM_SIZE %ld,\n \
+              CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE %zu,\n \
+              CL_KERNEL_PRIVATE_MEM_SIZE %ld\n\n",
+              wgSize,
+              compiledWgSize[0], compiledWgSize[1], compiledWgSize[2],
+              localMemSize,
+              perfHint,
+              privateMemSize);
+          }
+      }
   };  // class binaryLoaderInterface
 
   // clQualcommEngine concrete class using Qualcomm GEMM example
