@@ -376,8 +376,8 @@ namespace tensorflow {
         // Set OpenCL kernel arguments
         if (
           clSetKernelArg(clGemmKernel, 0, sizeof(int), &M) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 1, sizeof(int), &N) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 2, sizeof(int), &K) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 1, sizeof(int), &K) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 2, sizeof(int), &N) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b_T) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
