@@ -320,9 +320,6 @@ namespace tensorflow {
           clCreateProgramWithBinary(clCtx, 1, &clDevice, &clKernelBinSize,
                                   (const unsigned char **)&clKernelBinaryFile,
                                   NULL, &err);
-
-        free(clKernelBinaryFile);
-
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateProgramWithBinary fail with code " << err;
           return err;
