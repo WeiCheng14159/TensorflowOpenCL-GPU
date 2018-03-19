@@ -386,10 +386,8 @@ namespace tensorflow {
 
         // OpenCL enqueue kernel
         const size_t global = M;
-        const size_t local = 16;
-
         err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
-                                     &global, &local, 1, &transKernelEvent, &kernel_event);
+                                     &global, NULL, 1, &transKernelEvent, &kernel_event);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
           return err;
@@ -553,12 +551,9 @@ namespace tensorflow {
         }
 
         // OpenCL enqueue kernel
-        const int TS = 16;
         const size_t global[2] = {M, N};
-        const size_t local[2] = {TS, TS};
-
         err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 2, NULL,
-                                     global, local, 0, NULL, &kernel_event);
+                                     global, NULL, 0, NULL, &kernel_event);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
           return err;
