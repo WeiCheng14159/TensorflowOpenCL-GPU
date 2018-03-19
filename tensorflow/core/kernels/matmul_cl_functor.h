@@ -342,12 +342,16 @@ namespace tensorflow {
           return err;
         }
 
+        // debugOpenclKernel(clGemmKernel, clDevice);
+
         // Create OpenCL Transpose kernel obj
         clTransKernel = clCreateKernel(clProgram, "MatrixTranspose" , &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateKernel fail with code " << err;
           return err;
         }
+
+        // debugOpenclKernel(clTransKernel, clDevice);
 
         // Transose B -> B^T
         // Set OpenCL kernel arguments
