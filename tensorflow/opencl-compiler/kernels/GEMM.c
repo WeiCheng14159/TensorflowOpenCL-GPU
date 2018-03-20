@@ -9,13 +9,13 @@
 //                      QUALCOMM Proprietary/GTDR
 //--------------------------------------------------------------------------------------
 
-
-
 //--------------------------------------------------------------------------------------
 // Name: MatrixMatrixMulSimple()
 // Desc: Compute the multiplication of two matrices.  Simple approach where each
 // work-item computes one cell in the resulting matrix
 //--------------------------------------------------------------------------------------
+__attribute__((vec_type_hint(float4)))
+__attribute__((reqd_work_group_size(16, 16, 0)))
 __kernel void MatrixMatrixMulSimple(const int matrixRowsA,
                                     const int matrixColsARowsB,
                                     const int matrixColsB,
@@ -38,6 +38,64 @@ __kernel void MatrixMatrixMulSimple(const int matrixRowsA,
 
         matrixProduct[i * matrixColsB + j] = result;
     }
+}
+
+//--------------------------------------------------------------------------------------
+// Name: MatrixMatrixMulOptimized2D()
+// Desc: Compute the multiplication of two matrices.  In this case, each work-item
+// computes a cell of the resulting matrix C.  Additionally, local memory is
+// used to cache intermediate fetched values across work-items.
+//--------------------------------------------------------------------------------------
+#define LOCAL_MEM_SIZE 16
+__attribute__((vec_type_hint(float4)))
+__attribute__((reqd_work_group_size(LOCAL_MEM_SIZE, LOCAL_MEM_SIZE, 0)))
+__kernel void MatrixMatrixMulOptimized2D( const int matrixRowsA,
+                                          const int matrixColsARowsB,
+                                          const int matrixColsB,
+                                          const __global float* matrixA,
+                                          const __global float* matrixB,
+                                          __global float* matrixProduct )
+{
+
+    // Thread identifiers
+    const int localRow = get_local_id(0); // Local row ID (0 .. LOCAL_MEM_SIZE - 1)
+    const int localCol = get_local_id(1); // Local col ID (0 . .LOCAL_MEM_SIZE - 1)
+    const int globalRow = get_global_id(0); // global row ID of matrixProduct (0 .. matrixRowsA - 1)
+    const int globalCol = get_global_id(1); // global col ID of matrixProduct (0 .. matrixColsB - 1)
+
+    // Local memory to fit a tile of LOCAL_MEM_SIZE*LOCAL_MEM_SIZE elements of A and B
+    __local float Asub[LOCAL_MEM_SIZE][LOCAL_MEM_SIZE];
+    __local float Bsub[LOCAL_MEM_SIZE][LOCAL_MEM_SIZE];
+
+    // Initialise the accumulation register
+    float acc = 0.0f;
+
+    //Loop over all tiles
+    const int numTiles = matrixColsARowsB / LOCAL_MEM_SIZE;
+    for (int t=0; t<numTiles; t++) {
+
+        // Load one tile of A and B into local memory
+        const int tiledRow = LOCAL_MEM_SIZE * t + localRow;
+        const int tiledCol = LOCAL_MEM_SIZE * t + localCol;
+
+        Asub[localRow][localCol] = matrixA[tiledCol + globalRow * matrixColsARowsB];
+        Bsub[localRow][localCol] = matrixB[globalCol + tiledRow * matrixColsB];
+
+        // Synchronise to make sure the tile is loaded
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        // Perform the computation for a single tile
+        for (int k=0; k<LOCAL_MEM_SIZE ; k++) {
+          acc += Asub[localRow][k] * Bsub[k][localCol];
+        }
+
+        // Synchronise before loading the next tile
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    // Store the final result in C
+    matrixProduct[globalCol + globalRow * matrixColsB] = acc;
+
 }
 
 //--------------------------------------------------------------------------------------
