@@ -821,8 +821,8 @@ namespace functor {
       {
 
       // clLoaderEngine c = clLoaderEngine();
-      clBLASTEngine c = clBLASTEngine();
-      // clQualcommEngine c = clQualcommEngine();
+      // clBLASTEngine c = clBLASTEngine();
+      clQualcommEngine c = clQualcommEngine();
 
       // Init cl status
       cl_int status = CL_SUCCESS;
@@ -843,8 +843,8 @@ namespace functor {
       }
 
       // GEMM computation
-      // status = c.loadFromBinaryCompute(dim_pair);
-      status = c.clBlastCompute(dim_pair);
+      status = c.loadFromBinaryCompute(dim_pair);
+      // status = c.clBlastCompute(dim_pair);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL compute fail with code " << status;
       }
