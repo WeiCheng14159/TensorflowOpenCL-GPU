@@ -574,7 +574,8 @@ namespace tensorflow {
         }
 
         // Create OpenCL GEMM kernel obj
-        clGemmKernel = clCreateKernel(clProgram, "GEMM" , &err);
+        clGemmKernel = clCreateKernel(clProgram, "MatrixMatrixMulOptimized2D" , &err);
+        // clGemmKernel = clCreateKernel(clProgram, "MatrixMatrixMulSimple" , &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateKernel fail with code " << err;
           return err;
@@ -583,8 +584,8 @@ namespace tensorflow {
         // Set OpenCL kernel arguments
         if (
           clSetKernelArg(clGemmKernel, 0, sizeof(int), &M) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 1, sizeof(int), &N) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 2, sizeof(int), &K) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 1, sizeof(int), &K) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 2, sizeof(int), &N) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS
