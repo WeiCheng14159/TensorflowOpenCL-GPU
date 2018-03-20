@@ -821,8 +821,8 @@ namespace functor {
       {
 
       // clLoaderEngine c = clLoaderEngine();
-      clBLASTEngine c = clBLASTEngine();
-      // clQualcommEngine c = clQualcommEngine();
+      // clBLASTEngine c = clBLASTEngine();
+      clQualcommEngine c = clQualcommEngine();
 
       // Init cl status
       cl_int status = CL_SUCCESS;
