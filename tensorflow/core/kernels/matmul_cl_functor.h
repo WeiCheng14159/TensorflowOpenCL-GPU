@@ -843,8 +843,8 @@ namespace functor {
       }
 
       // GEMM computation
-      // status = c.loadFromBinaryCompute(dim_pair);
-      status = c.clBlastCompute(dim_pair);
+      status = c.loadFromBinaryCompute(dim_pair);
+      // status = c.clBlastCompute(dim_pair);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL compute fail with code " << status;
       }
