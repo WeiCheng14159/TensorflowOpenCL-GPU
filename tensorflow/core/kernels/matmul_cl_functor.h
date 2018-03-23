@@ -13,8 +13,6 @@
 //     v
 // clBLASTEngine
 
-#ifdef TEST_CL
-  #warning "Complied with TEST_CL flag, TF OpenCL matrix multiplaction will be used!"
 #ifndef MATMUL_CL_FUNCTOR_H_
 #define MATMUL_CL_FUNCTOR_H_
 
@@ -865,4 +863,3 @@ namespace functor {
 }  // end namespace tensorflow
 
 #endif  // MATMUL_CL_FUNCTOR_H_
-#endif  // TEST_CL

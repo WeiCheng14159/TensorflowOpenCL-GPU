@@ -8,7 +8,6 @@ bazel build --config=android_arm64 :$TARGET \
     --cxxopt="-std=c++11" \
     --cxxopt="-DSELECTIVE_REGISTRATION" \
     --cxxopt="-DSUPPORT_SELECTIVE_REGISTRATION" \
-    --cxxopt="-DTEST_CL" \
     --jobs=8
 
 # CPU version
