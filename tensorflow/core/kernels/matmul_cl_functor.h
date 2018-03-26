@@ -356,8 +356,6 @@ namespace tensorflow {
           return err;
         }
 
-        // debugOpenclKernel(clGemmKernel, clDevice);
-
         // Create OpenCL Transpose kernel obj
         clTransKernel = clCreateKernel(clProgram, "MatrixTranspose" , &err);
         if( err != CL_SUCCESS ){
@@ -365,9 +363,7 @@ namespace tensorflow {
           return err;
         }
 
-        // debugOpenclKernel(clTransKernel, clDevice);
-
-        if( a_traspose && b_traspose ){
+        if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
           if (
             clSetKernelArg(clTransKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
@@ -386,7 +382,6 @@ namespace tensorflow {
             return err;
           }
 
-          // Set OpenCL kernel arguments
           if (
             clSetKernelArg(clGemmKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 1, sizeof(int), &RowA) != CL_SUCCESS ||
@@ -400,7 +395,6 @@ namespace tensorflow {
             return CL_FALSE;
           }
 
-          // OpenCL enqueue kernel
           const size_t global = ColA;
           err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
                                        &global, NULL, 1, transKernelEvent, &gemmKernelEvent);
@@ -409,11 +403,9 @@ namespace tensorflow {
             return err;
           }
 
-          // Wait for kernel computation
           clWaitForEvents(1, &gemmKernelEvent);
 
-
-        }else if( a_traspose && !b_traspose ){
+        }else if( a_traspose && !b_traspose ){ // Transpose A: yes, Transpose B: no
 
           if (
             clSetKernelArg(clTransKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
@@ -449,7 +441,6 @@ namespace tensorflow {
             return err;
           }
 
-          // Set OpenCL kernel arguments
           if (
             clSetKernelArg(clGemmKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 1, sizeof(int), &RowA) != CL_SUCCESS ||
@@ -463,7 +454,6 @@ namespace tensorflow {
             return CL_FALSE;
           }
 
-          // OpenCL enqueue kernel
           const size_t global = ColA;
           err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
                                        &global, NULL, 2, transKernelEvent, &gemmKernelEvent);
@@ -472,12 +462,10 @@ namespace tensorflow {
             return err;
           }
 
-          // Wait for kernel computation
           clWaitForEvents(1, &gemmKernelEvent);
 
-        }else if( !a_traspose && b_traspose ){
+        }else if( !a_traspose && b_traspose ){ // Transpose A: no, Transpose B: yes
 
-          // Set OpenCL kernel arguments
           if (
             clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
@@ -491,7 +479,6 @@ namespace tensorflow {
             return CL_FALSE;
           }
 
-          // OpenCL enqueue kernel
           const size_t global = RowA;
           err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
                                        &global, NULL, 0, NULL, &gemmKernelEvent);
@@ -500,10 +487,9 @@ namespace tensorflow {
             return err;
           }
 
-          // Wait for kernel computation
           clWaitForEvents(1, &gemmKernelEvent);
 
-        }else if( !a_traspose && !b_traspose ){
+        }else if( !a_traspose && !b_traspose ){ // Transpose A: no, Transpose B: no
 
           if (
             clSetKernelArg(clTransKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
@@ -522,7 +508,6 @@ namespace tensorflow {
             return err;
           }
 
-          // Set OpenCL kernel arguments
           if (
             clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
@@ -536,7 +521,6 @@ namespace tensorflow {
             return CL_FALSE;
           }
 
-          // OpenCL enqueue kernel
           const size_t global = RowA;
           err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
                                        &global, NULL, 1, transKernelEvent, &gemmKernelEvent);
@@ -545,10 +529,8 @@ namespace tensorflow {
             return err;
           }
 
-          // Wait for kernel computation
           clWaitForEvents(1, &gemmKernelEvent);
         }
-
         return CL_SUCCESS;
       }
 
