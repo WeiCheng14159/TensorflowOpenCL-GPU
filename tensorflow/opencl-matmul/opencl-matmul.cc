@@ -73,49 +73,55 @@ int main(int argc, char* argv[]) {
     }
 
     LOG(INFO) << ">>> [TF] Starting " << num_runs << " TF MatMul runs...";
+    // Start timer
     gettimeofday(&start, NULL);
 
     for (int r=0; r<num_runs; r++) {
       // Compute matrix multiplaction result using TF
-      TF_CHECK_OK(session->Run({{"x", Tx}, {"y", Ty}}, {"matmul"}, {}, &outputs)); // Get cost
+      TF_CHECK_OK(session->Run({{"x", TensorA}, {"y", TensorB}}, {"matmul"},
+        {}, &outputs)); // Get cost
     }
     auto tf_res = outputs[0].matrix<float>();
     // cout << "TF result: \n" << tf_res << endl;
 
+    // Stop timer
     gettimeofday(&end, NULL);
+
     double interval = ( end.tv_sec * 1.0e6 + end.tv_usec ) -
       ( start.tv_sec * 1.0e6 + start.tv_usec );
     double runtime = interval / num_runs;
     LOG(INFO) << ">>> Done: took " << runtime << " us per run";
 
     // Compute matrix multiplaction result using Eigen
-    auto Tx_mat = Eigen::Map<Eigen::Matrix<
-                              float,           /* scalar element type */
-                              Eigen::Dynamic,  /* num_rows is a run-time value */
-                              Eigen::Dynamic,  /* num_cols is a run-time value */
-                              Eigen::RowMajor  /* tensorflow::Tensor is always row-major */>>(
-                                Tx.flat<float>().data(),  /* ptr to data */
-                                Tx.dim_size(0),           /* num_rows */
-                                Tx.dim_size(1)            /* num_cols */);
-    auto Ty_mat = Eigen::Map<Eigen::Matrix<
-                              float,           /* scalar element type */
-                              Eigen::Dynamic,  /* num_rows is a run-time value */
-                              Eigen::Dynamic,  /* num_cols is a run-time value */
-                              Eigen::RowMajor  /* tensorflow::Tensor is always row-major */>>(
-                                Ty.flat<float>().data(),  /* ptr to data */
-                                Ty.dim_size(0),           /* num_rows */
-                                Ty.dim_size(1)            /* num_cols */);
+    auto TensorAEigenMap = Eigen::Map<Eigen::Matrix<
+      float,           /* scalar element type */
+      Eigen::Dynamic,  /* num_rows is a run-time value */
+      Eigen::Dynamic,  /* num_cols is a run-time value */
+      Eigen::RowMajor  /* tensorflow::Tensor is always row-major */>>(
+        TensorA.flat<float>().data(),  /* ptr to data */
+        rowA,           /* num_rows */
+        colA            /* num_cols */);
+
+    auto TensorBEigenMap = Eigen::Map<Eigen::Matrix<
+      float,           /* scalar element type */
+      Eigen::Dynamic,  /* num_rows is a run-time value */
+      Eigen::Dynamic,  /* num_cols is a run-time value */
+      Eigen::RowMajor  /* tensorflow::Tensor is always row-major */>>(
+        TensorB.flat<float>().data(),  /* ptr to data */
+        rowB,           /* num_rows */
+        colB            /* num_cols */);
 
     auto eigen_res = Eigen::Map<Eigen::Matrix<
-                            float,           /* scalar element type */
-                            Eigen::Dynamic,  /* num_rows is a run-time value */
-                            Eigen::Dynamic,  /* num_cols is a run-time value */
-                            Eigen::RowMajor  /* tensorflow::Tensor is always row-major */>>(
-                              Tx.flat<float>().data(),  /* ptr to data */
-                              Tx.dim_size(0),           /* num_rows */
-                              Ty.dim_size(1)            /* num_cols */);
+      float,           /* scalar element type */
+      Eigen::Dynamic,  /* num_rows is a run-time value */
+      Eigen::Dynamic,  /* num_cols is a run-time value */
+      Eigen::RowMajor  /* tensorflow::Tensor is always row-major */>>(
+        TensorA.flat<float>().data(),  /* ptr to data */
+        rowC,           /* num_rows */
+        colC            /* num_cols */);
 
     LOG(INFO) << ">>> [Eigen] Starting " << num_runs << " Eigen MatMul runs...";
+    // Start timer
     gettimeofday(&start, NULL);
 
     if( transA == 1 && transB == 1 ){
@@ -130,6 +136,7 @@ int main(int argc, char* argv[]) {
 
     // cout << "Eigen result: \n" << eigen_res << endl ;
 
+    // Stop timer
     gettimeofday(&end, NULL);
     interval = ( end.tv_sec * 1.0e6 + end.tv_usec ) -
       ( start.tv_sec * 1.0e6 + start.tv_usec );
@@ -137,6 +144,7 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << ">>> Done: took " << runtime << " us per run";
 
     cout << "Checking results ...\n";
+
     double accu_err = 0;
     for( auto row = 0 ; row < rowC ; row ++ )
     {
