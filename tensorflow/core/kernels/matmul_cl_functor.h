@@ -40,17 +40,25 @@ namespace tensorflow {
       // clEngine initializaiotn function
       cl_int hostInit(
         typename functor::MatMulTypes<T>::in_type in0,
-        typename functor::MatMulTypes<T>::in_type in1)
+        typename functor::MatMulTypes<T>::in_type in1,
+        typename functor::MatMulTypes<T>::out_type out,
+        const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair)
       {
         // Matrix dimension init
-        M = in0.dimension(0);
-        K = in0.dimension(1);
-        N = in1.dimension(1);
+        RowA = in0.dimension(0);
+        ColA = in0.dimension(1);
+        RowB = in1.dimension(0);
+        ColB = in1.dimension(1);
+        RowC = out.dimension(0);
+        ColC = out.dimension(1);
 
         // Matrix size init
-        in0_size = sizeof(T) * M * K;
-        in1_size = sizeof(T) * K * N;
-        out_size = sizeof(T) * M * N;
+        in0_size = sizeof(T) * RowA * ColA;
+        in1_size = sizeof(T) * RowB * ColB;
+        out_size = sizeof(T) * RowC * ColC;
+
+        MatATranspose = ( dim_pair[0].first == 0 ) ? true : false;
+        MatBTranspose = ( dim_pair[0].second == 1 ) ? true : false;
 
         // OpenCL error code init
         err = CL_SUCCESS;
@@ -90,9 +98,9 @@ namespace tensorflow {
       void debug( bool print=true ){
         if( print ){
           LOG(INFO) << "Dealing with datatype of size " << sizeof(T);
-          LOG(INFO) << "in0 = [" << M << "," << K  << "]";
-          LOG(INFO) << "in1 = [" << K << "," << N  << "]";
-          LOG(INFO) << "out = [" << M << "," << N  << "]";
+          LOG(INFO) << "in0 = [" << RowA << "," << ColA  << "]";
+          LOG(INFO) << "in1 = [" << RowB << "," << ColB  << "]";
+          LOG(INFO) << "out = [" << RowC << "," << ColC  << "]";
         }
       }
 
@@ -124,9 +132,16 @@ namespace tensorflow {
     protected:
 
       // Default matrix dimension
-      size_t M = 0;
-      size_t N = 0;
-      size_t K = 0;
+      size_t RowA = 0;
+      size_t ColA = 0;
+      size_t RowB = 0;
+      size_t ColB = 0;
+      size_t RowC = 0;
+      size_t ColC = 0;
+
+      // Matrix tranpose info
+      bool MatATranspose;
+      bool MatBTranspose;
 
       // Default matrix size
       size_t in0_size = 0;
@@ -223,6 +238,7 @@ namespace tensorflow {
 
         // Free OpenCL memory objects
         clReleaseMemObject(a);
+        clReleaseMemObject(a_T);
         clReleaseMemObject(b);
         clReleaseMemObject(b_T);
         clReleaseMemObject(c);
@@ -241,7 +257,8 @@ namespace tensorflow {
         clReleaseContext(clCtx);
 
         // Free OpenCL events
-        clReleaseEvent(transKernelEvent);
+        clReleaseEvent(transKernelEvent[0]);
+        clReleaseEvent(transKernelEvent[1]);
         clReleaseEvent(gemmKernelEvent);
         clReleaseEvent(writeBufferEvents[0]);
         clReleaseEvent(writeBufferEvents[1]);
@@ -284,6 +301,7 @@ namespace tensorflow {
 
         // Allocate memory buffers
         a = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in0_size, NULL, NULL);
+        a_T = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, in0_size, NULL, NULL);
         b = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in1_size, NULL, NULL);
         b_T = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, in1_size, NULL, NULL);
         c = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, out_size, NULL, NULL);
@@ -331,7 +349,7 @@ namespace tensorflow {
         }
 
         // Create OpenCL GEMM kernel obj
-        clGemmKernel = clCreateKernel(clProgram, "MatrixMatrixMulOptimized" , &err);
+        clGemmKernel = clCreateKernel(clProgram, "MatrixMatrixMulOptimizedTN" , &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateKernel fail with code " << err;
           return err;
@@ -348,51 +366,188 @@ namespace tensorflow {
 
         // debugOpenclKernel(clTransKernel, clDevice);
 
-        // Transose B -> B^T
-        // Set OpenCL kernel arguments
-        if (
-          clSetKernelArg(clTransKernel, 0, sizeof(int), &K) != CL_SUCCESS ||
-          clSetKernelArg(clTransKernel, 1, sizeof(int), &N) != CL_SUCCESS ||
-          clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &b) != CL_SUCCESS ||
-          clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &b_T) != CL_SUCCESS
-        ){
-          LOG(ERROR) << "clSetKernelArg fail";
-          return CL_FALSE;
+        if( MatATranspose && MatBTranspose ){
+
+          if (
+            clSetKernelArg(clTransKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &a) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &a_T) != CL_SUCCESS
+          ){
+            LOG(ERROR) << "clSetKernelArg fail";
+            return CL_FALSE;
+          }
+
+          err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                                       &RowA, NULL, 0, NULL, &transKernelEvent[0]);
+          if( err != CL_SUCCESS ){
+            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+            return err;
+          }
+
+          // Set OpenCL kernel arguments
+          if (
+            clSetKernelArg(clGemmKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 1, sizeof(int), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 2, sizeof(int), &RowB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a_T) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) != CL_SUCCESS
+          ){
+            LOG(ERROR) << "clSetKernelArg fail";
+            return CL_FALSE;
+          }
+
+          // OpenCL enqueue kernel
+          const size_t global = ColA;
+          err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                                       &global, NULL, 1, transKernelEvent, &gemmKernelEvent);
+          if( err != CL_SUCCESS ){
+            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+            return err;
+          }
+
+          // Wait for kernel computation
+          clWaitForEvents(1, &gemmKernelEvent);
+
+
+        }else if( MatATranspose && !MatBTranspose ){
+
+          if (
+            clSetKernelArg(clTransKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &a) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &a_T) != CL_SUCCESS
+          ){
+            LOG(ERROR) << "clSetKernelArg fail";
+            return CL_FALSE;
+          }
+
+          err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                                       &RowA, NULL, 0, NULL, &transKernelEvent[0]);
+          if( err != CL_SUCCESS ){
+            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+            return err;
+          }
+
+          if (
+            clSetKernelArg(clTransKernel, 0, sizeof(int), &RowB) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 1, sizeof(int), &ColB) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &b) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &b_T) != CL_SUCCESS
+          ){
+            LOG(ERROR) << "clSetKernelArg fail";
+            return CL_FALSE;
+          }
+
+          err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                                       &RowB, NULL, 0, NULL, &transKernelEvent[1]);
+          if( err != CL_SUCCESS ){
+            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+            return err;
+          }
+
+          // Set OpenCL kernel arguments
+          if (
+            clSetKernelArg(clGemmKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 1, sizeof(int), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 2, sizeof(int), &ColB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a_T) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b_T) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 6, RowA * sizeof(float), NULL) != CL_SUCCESS
+          ){
+            LOG(ERROR) << "clSetKernelArg fail";
+            return CL_FALSE;
+          }
+
+          // OpenCL enqueue kernel
+          const size_t global = ColA;
+          err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                                       &global, NULL, 2, transKernelEvent, &gemmKernelEvent);
+          if( err != CL_SUCCESS ){
+            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+            return err;
+          }
+
+          // Wait for kernel computation
+          clWaitForEvents(1, &gemmKernelEvent);
+
+        }else if( !MatATranspose && MatBTranspose ){
+
+          // Set OpenCL kernel arguments
+          if (
+            clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 2, sizeof(int), &RowB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) != CL_SUCCESS
+          ){
+            LOG(ERROR) << "clSetKernelArg fail";
+            return CL_FALSE;
+          }
+
+          // OpenCL enqueue kernel
+          const size_t global = RowA;
+          err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                                       &global, NULL, 0, NULL, &gemmKernelEvent);
+          if( err != CL_SUCCESS ){
+            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+            return err;
+          }
+
+          // Wait for kernel computation
+          clWaitForEvents(1, &gemmKernelEvent);
+
+        }else if( !MatATranspose && !MatBTranspose ){
+
+          if (
+            clSetKernelArg(clTransKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 1, sizeof(int), &ColB) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &b) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &b_T) != CL_SUCCESS
+          ){
+            LOG(ERROR) << "clSetKernelArg fail";
+            return CL_FALSE;
+          }
+
+          err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                                       &ColA, NULL, 0, NULL, &transKernelEvent[0]);
+          if( err != CL_SUCCESS ){
+            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+            return err;
+          }
+
+          // Set OpenCL kernel arguments
+          if (
+            clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 2, sizeof(int), &ColB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b_T) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) != CL_SUCCESS
+          ){
+            LOG(ERROR) << "clSetKernelArg fail";
+            return CL_FALSE;
+          }
+
+          // OpenCL enqueue kernel
+          const size_t global = RowA;
+          err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                                       &global, NULL, 1, transKernelEvent, &gemmKernelEvent);
+          if( err != CL_SUCCESS ){
+            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
+            return err;
+          }
+
+          // Wait for kernel computation
+          clWaitForEvents(1, &gemmKernelEvent);
         }
 
-        // OpenCL enqueue kernel
-        err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
-                                     &K, NULL, 0, NULL, &transKernelEvent);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-          return err;
-        }
-
-        // Set OpenCL kernel arguments
-        if (
-          clSetKernelArg(clGemmKernel, 0, sizeof(int), &M) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 1, sizeof(int), &K) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 2, sizeof(int), &N) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b_T) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 6, K * sizeof(float), NULL) != CL_SUCCESS
-        ){
-          LOG(ERROR) << "clSetKernelArg fail";
-          return CL_FALSE;
-        }
-
-        // OpenCL enqueue kernel
-        const size_t global = M;
-        err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
-                                     &global, NULL, 1, &transKernelEvent, &gemmKernelEvent);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-          return err;
-        }
-
-        // Wait for kernel computation
-        clWaitForEvents(1, &gemmKernelEvent);
         return CL_SUCCESS;
       }
 
@@ -400,13 +555,14 @@ namespace tensorflow {
 
       // OpenCL memeory object
       cl_mem a;
+      cl_mem a_T;
       cl_mem b;
       cl_mem b_T;
       cl_mem c;
 
       // OpenCL events
       cl_event gemmKernelEvent;
-      cl_event transKernelEvent;
+      cl_event transKernelEvent[2];
       cl_event writeBufferEvents[2];
 
       // OpenCL program object
@@ -464,7 +620,7 @@ namespace tensorflow {
         // Read results
         if( err == CL_SUCCESS ){
           // Read computed result back to host
-          for( auto idx = 0 ; idx < M*N ; idx++){
+          for( auto idx = 0 ; idx < RowA*ColB ; idx++){
             out.data()[idx] = clHostPtrC[idx];
           }
         }else{
@@ -510,11 +666,11 @@ namespace tensorflow {
         clWaitForEvents(2, mapBufferEvents);
 
         // Host update the buffer using pointer clHostPtrA in host address space
-        for( auto idx = 0 ; idx < M*K ; idx ++){
+        for( auto idx = 0 ; idx < RowA*ColA ; idx ++){
           clHostPtrA[ idx ] = in0.data()[idx];
         }
         // Host update the buffer using pointer clHostPtrB in host address space
-        for( auto idx = 0 ; idx < K*N ; idx ++){
+        for( auto idx = 0 ; idx < ColA*ColB ; idx ++){
           clHostPtrB[ idx ] = in1.data()[idx];
         }
 
@@ -581,9 +737,9 @@ namespace tensorflow {
 
         // Set OpenCL kernel arguments
         if (
-          clSetKernelArg(clGemmKernel, 0, sizeof(int), &M) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 1, sizeof(int), &K) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 2, sizeof(int), &N) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 2, sizeof(int), &ColB) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS
@@ -592,7 +748,7 @@ namespace tensorflow {
         }
 
         // OpenCL enqueue kernel
-        const size_t global[2] = {M, N};
+        const size_t global[2] = {RowA, ColB};
         err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 2, NULL,
                                      global, NULL, 0, NULL, &gemmKernelEvent);
         if( err != CL_SUCCESS ){
@@ -725,21 +881,21 @@ namespace tensorflow {
         // When transpose_a == Transpose::kNo, then a_ld must be at least m,
         // otherwise a_ld must be at least k.
         if( MatATranspose == CLBlastTransposeYes ){
-          a_ld = M;
+          a_ld = RowA;
         }else{
-          a_ld = K;
+          a_ld = ColA;
         }
 
         // When transpose_b == Transpose::kNo, then b_ld must be at least k,
         // otherwise b_ld must be at least n.
         if( MatBTranspose == CLBlastTransposeYes ){
-          b_ld = K;
+          b_ld = ColA;
         }else{
-          b_ld = N;
+          b_ld = ColB;
         }
 
         // The value of c_ld must be at least m.
-        const size_t c_ld = N;
+        const size_t c_ld = ColB;
 
         // Performs the matrix product C = alpha * A * B + beta * C
         const float alpha = 1.0f;
@@ -748,7 +904,7 @@ namespace tensorflow {
         // Call the SGEMM routine.
         CLBlastStatusCode status = CLBlastSgemm(CLBlastLayoutRowMajor,
                                                 MatATranspose, MatBTranspose,
-                                                M, N, K,
+                                                RowA, ColB, ColA,
                                                 alpha,
                                                 a, 0, a_ld,
                                                 b, 0, b_ld,
@@ -826,7 +982,7 @@ namespace functor {
       cl_int status = CL_SUCCESS;
 
       // OpenCL host & device side initializaiotn
-      status = c.hostInit(in0, in1);
+      status = c.hostInit(in0, in1, out, dim_pair);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL init fail with code " << status;
       }
