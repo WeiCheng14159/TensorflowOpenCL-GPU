@@ -122,8 +122,7 @@ namespace tensorflow {
       // OpenCL memeory object init
       virtual cl_int memInit(
         typename functor::MatMulTypes<T>::in_type in0,
-        typename functor::MatMulTypes<T>::in_type in1,
-        typename functor::MatMulTypes<T>::out_type out) = 0;
+        typename functor::MatMulTypes<T>::in_type in1) = 0;
 
     protected:
 
@@ -159,8 +158,7 @@ namespace tensorflow {
 
     // Virtual method
       // Compile & Compute the results
-      virtual cl_int loadFromBinaryCompute(
-        const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair ) = 0;
+      virtual cl_int loadFromBinaryCompute() = 0;
 
     protected:
 
@@ -298,8 +296,7 @@ namespace tensorflow {
 
       cl_int memInit(
         typename functor::MatMulTypes<float>::in_type in0,
-        typename functor::MatMulTypes<float>::in_type in1,
-        typename functor::MatMulTypes<float>::out_type out)
+        typename functor::MatMulTypes<float>::in_type in1)
       {
         // Init cl err code
         err = CL_SUCCESS;
@@ -363,8 +360,7 @@ namespace tensorflow {
         return CL_SUCCESS;
       }
 
-      cl_int loadFromBinaryCompute(
-        const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair )
+      cl_int loadFromBinaryCompute()
       {
         // Init cl err code
         err = CL_SUCCESS;
@@ -656,8 +652,7 @@ namespace tensorflow {
 
       cl_int memInit(
         typename functor::MatMulTypes<float>::in_type in0,
-        typename functor::MatMulTypes<float>::in_type in1,
-        typename functor::MatMulTypes<float>::out_type out)
+        typename functor::MatMulTypes<float>::in_type in1)
       {
 
         // Init cl err code
@@ -682,14 +677,13 @@ namespace tensorflow {
         return CL_SUCCESS;
       }
 
-      cl_int clBlastCompute(
-        const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair )
+      cl_int clBlastCompute()
       {
         // Whether Matrix A, B should be transposed
-        auto MatATranspose = ( dim_pair[0].first == 0 ) ?
+        auto MatATranspose = ( a_traspose == true ) ?
                               CLBlastTransposeYes : CLBlastTransposeNo;
-        auto MatBTranspose = ( dim_pair[0].second == 0 ) ?
-                              CLBlastTransposeNo : CLBlastTransposeYes;
+        auto MatBTranspose = ( b_traspose == true ) ?
+                              CLBlastTransposeYes : CLBlastTransposeNo;
 
         // Leading dimension of the input A matrix. This value must be greater than 0.
         size_t a_ld;
@@ -809,14 +803,14 @@ namespace functor {
       // c.debug(true);
 
       // OpenCL memeory obj init & memory copy
-      status = c.memInit(in0, in1, out);
+      status = c.memInit(in0, in1);
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL mem init fail with code " << status;
       }
 
       // GEMM computation
-      status = c.loadFromBinaryCompute(dim_pair);
-      // status = c.clBlastCompute(dim_pair);
+      status = c.loadFromBinaryCompute();
+      // status = c.clBlastCompute();
       if( status != CL_SUCCESS ){
         LOG(ERROR) << "CL compute fail with code " << status;
       }
