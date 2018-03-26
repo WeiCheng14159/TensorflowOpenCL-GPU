@@ -10,8 +10,8 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
 
-    if( argc != 3 ){
-      cerr << "expected 2 arguments [Size of Matrix] [Num of Runs]" << endl;
+    if( argc != 8 ){
+      cerr << "expected 2 arguments [rowA] [colA] [rowB] [colB] [TransA] [TransB] [Num of Runs]" << endl;
       exit(1);
     }
 
@@ -39,25 +39,36 @@ int main(int argc, char* argv[]) {
     // Load graph into session
     TF_CHECK_OK(session->Create(graph_def));
 
+    // Matrix transpose option before matrix multiplication
+    int transA = atoi( argv[5] );
+    int transB = atoi( argv[6] );
+
     // Matrix size
-    int N = atoi( argv[1] );
-    Tensor Tx (DT_FLOAT, TensorShape({N ,N}));
-    Tensor Ty (DT_FLOAT, TensorShape({N ,N}));
+    int rowA = atoi( argv[1] );
+    int colA = atoi( argv[2] );
+    int rowB = atoi( argv[3] );
+    int colB = atoi( argv[4] );
+    int rowC = (transA == 1) ? colA : rowA;
+    int colC = (transB == 1) ? rowB : colB;
 
     // Number of runs
-    int num_runs = atoi( argv[2] );
+    int num_runs = atoi( argv[7] );
+
+    // Tensorflow Tensor initializaiotn
+    Tensor TensorA (DT_FLOAT, TensorShape({ rowA, colA }));
+    Tensor TensorB (DT_FLOAT, TensorShape({ rowB, colB }));
 
     // Matrix initializaiotn
-    auto Tx_map = Tx.tensor<float, 2>();
-    for( int i = 0 ; i < N ; i ++ ){
-      for( auto j = 0 ; j < N ; j ++ ){
-        Tx_map(i, j) = dis(gen);
+    auto TensorAMatrix = TensorA.tensor<float, 2>();
+    for( int i = 0 ; i < rowA ; i ++ ){
+      for( auto j = 0 ; j < colA ; j ++ ){
+        TensorAMatrix(i, j) = dis(gen);
       }
     }
-    auto Ty_map = Ty.tensor<float, 2>();
-    for( int i = 0 ; i < N ; i ++ ){
-      for( auto j = 0 ; j < N ; j ++ ){
-        Ty_map(i, j) = dis(gen);
+    auto TensorBMatrix = TensorB.tensor<float, 2>();
+    for( int i = 0 ; i < rowB ; i ++ ){
+      for( auto j = 0 ; j < colB ; j ++ ){
+        TensorBMatrix(i, j) = dis(gen);
       }
     }
 
@@ -107,7 +118,16 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << ">>> [Eigen] Starting " << num_runs << " Eigen MatMul runs...";
     gettimeofday(&start, NULL);
 
-    eigen_res = ( Tx_mat * Ty_mat );
+    if( transA == 1 && transB == 1 ){
+      eigen_res = ( TensorAEigenMap.transpose() * TensorBEigenMap.transpose() );
+    }else if( transA == 1 && transB == 0 ){
+      eigen_res = ( TensorAEigenMap.transpose() * TensorBEigenMap );
+    }else if( transA == 0 && transB == 1 ){
+      eigen_res = ( TensorAEigenMap * TensorBEigenMap.transpose() );
+    }else if( transA == 0 && transB == 0 ){
+      eigen_res = ( TensorAEigenMap * TensorBEigenMap );
+    }
+
     // cout << "Eigen result: \n" << eigen_res << endl ;
 
     gettimeofday(&end, NULL);
@@ -118,13 +138,13 @@ int main(int argc, char* argv[]) {
 
     cout << "Checking results ...\n";
     double accu_err = 0;
-    for( auto row = 0 ; row < Tx.dim_size(0) ; row ++ )
+    for( auto row = 0 ; row < rowC ; row ++ )
     {
-      for( auto col = 0 ; col < Ty.dim_size(1) ; col ++ ){
+      for( auto col = 0 ; col < colC ; col ++ ){
         accu_err += abs( tf_res(row, col) - eigen_res(row, col) );
       }
     }
-    cout << "err per unit: " << accu_err/(N*N) << endl;
+    cout << "err per unit: " << accu_err/(rowC*colC) << endl;
 
     return 0;
 }
