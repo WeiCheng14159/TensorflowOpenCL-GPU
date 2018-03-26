@@ -1,14 +1,14 @@
-// clEngine<float>
+// clMatMulEngine<float>
 //     |
 //     v
 // clLoaderEngine   <---- binaryLoaderInterface
 //
-// clEngine<float>
+// clMatMulEngine<float>
 //     |
 //     v
 // clQualcommEngine <---- binaryLoaderInterface
 //
-// clEngine<float>
+// clMatMulEngine<float>
 //     |
 //     v
 // clBLASTEngine
@@ -32,12 +32,12 @@ using namespace std;
 namespace tensorflow {
   typedef Eigen::ThreadPoolDevice CPUDevice;
 
-  // clEngine abstract class (interface), computing datatype T
-  template<class T> class clEngine {
+  // clMatMulEngine abstract class (interface), computing datatype T
+  template<class T> class clMatMulEngine {
     public:
 
     // Concrete methods
-      // clEngine initializaiotn function
+      // clMatMulEngine initializaiotn function
       cl_int hostInit(
         typename functor::MatMulTypes<T>::in_type in0,
         typename functor::MatMulTypes<T>::in_type in1,
@@ -53,12 +53,13 @@ namespace tensorflow {
         ColC = out.dimension(1);
 
         // Matrix size init
-        in0_size = sizeof(T) * RowA * ColA;
-        in1_size = sizeof(T) * RowB * ColB;
-        out_size = sizeof(T) * RowC * ColC;
+        a_size = sizeof(T) * RowA * ColA;
+        b_size = sizeof(T) * RowB * ColB;
+        c_size = sizeof(T) * RowC * ColC;
 
-        MatATranspose = ( dim_pair[0].first == 0 ) ? true : false;
-        MatBTranspose = ( dim_pair[0].second == 1 ) ? true : false;
+        // Matrix transpose
+        a_traspose = ( dim_pair[0].first == 0 ) ? true : false;
+        b_traspose = ( dim_pair[0].second == 1 ) ? true : false;
 
         // OpenCL error code init
         err = CL_SUCCESS;
@@ -98,9 +99,9 @@ namespace tensorflow {
       void debug( bool print=true ){
         if( print ){
           LOG(INFO) << "Dealing with datatype of size " << sizeof(T);
-          LOG(INFO) << "in0 = [" << RowA << "," << ColA  << "]";
-          LOG(INFO) << "in1 = [" << RowB << "," << ColB  << "]";
-          LOG(INFO) << "out = [" << RowC << "," << ColC  << "]";
+          LOG(INFO) << "MatrixA = [" << RowA << "," << ColA  << "]";
+          LOG(INFO) << "MatrixB = [" << RowB << "," << ColB  << "]";
+          LOG(INFO) << "MatrixC = [" << RowC << "," << ColC  << "]";
         }
       }
 
@@ -140,13 +141,13 @@ namespace tensorflow {
       size_t ColC = 0;
 
       // Matrix tranpose info
-      bool MatATranspose;
-      bool MatBTranspose;
+      bool a_traspose;
+      bool b_traspose;
 
       // Default matrix size
-      size_t in0_size = 0;
-      size_t in1_size = 0;
-      size_t out_size = 0;
+      size_t a_size = 0;
+      size_t b_size = 0;
+      size_t c_size = 0;
 
       // OpenCL host side object
       cl_platform_id platform;
@@ -155,7 +156,7 @@ namespace tensorflow {
       cl_command_queue clQueue;
       cl_int err = CL_SUCCESS;
 
-  };  // class clEngine
+  };  // class clMatMulEngine
 
   // binaryLoaderInterface abstract class (interface)
   class binaryLoaderInterface{
@@ -231,17 +232,17 @@ namespace tensorflow {
   };  // class binaryLoaderInterface
 
   // clQualcommEngine concrete class using Qualcomm GEMM example
-  class clQualcommEngine : public binaryLoaderInterface, public clEngine<float>{
+  class clQualcommEngine : public binaryLoaderInterface, public clMatMulEngine<float>{
     public:
 
       cl_int clEnd(){
 
         // Free OpenCL memory objects
-        clReleaseMemObject(a);
-        clReleaseMemObject(a_T);
-        clReleaseMemObject(b);
-        clReleaseMemObject(b_T);
-        clReleaseMemObject(c);
+        clReleaseMemObject(clBufferA);
+        clReleaseMemObject(clBufferA_T);
+        clReleaseMemObject(clBufferB);
+        clReleaseMemObject(clBufferB_T);
+        clReleaseMemObject(clBufferC);
 
         // Free OpenCL kernel
         clReleaseKernel(clGemmKernel);
@@ -273,7 +274,7 @@ namespace tensorflow {
         err = CL_SUCCESS;
 
         // Read results
-        err = clEnqueueReadBuffer(clQueue, c, CL_TRUE, 0, out_size, out.data(), 0, NULL, NULL);
+        err = clEnqueueReadBuffer(clQueue, clBufferC, CL_TRUE, 0, c_size, out.data(), 0, NULL, NULL);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueReadBuffer fail with code " << err;
           return err;
@@ -300,18 +301,18 @@ namespace tensorflow {
         err = CL_SUCCESS;
 
         // Allocate memory buffers
-        a = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in0_size, NULL, NULL);
-        a_T = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, in0_size, NULL, NULL);
-        b = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in1_size, NULL, NULL);
-        b_T = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, in1_size, NULL, NULL);
-        c = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, out_size, NULL, NULL);
+        clBufferA = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, a_size, NULL, NULL);
+        clBufferA_T = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, a_size, NULL, NULL);
+        clBufferB = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, b_size, NULL, NULL);
+        clBufferB_T = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, b_size, NULL, NULL);
+        clBufferC = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, c_size, NULL, NULL);
 
         // Enqueue write buffer commands (acynchronous write)
-        err = clEnqueueWriteBuffer(clQueue, a, CL_FALSE, 0, in0_size, in0.data(),
+        err = clEnqueueWriteBuffer(clQueue, clBufferA, CL_FALSE, 0, a_size, in0.data(),
                                    0, NULL, &writeBufferEvents[0]);
         if( err != CL_SUCCESS ){ return err; }
 
-        err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
+        err = clEnqueueWriteBuffer(clQueue, clBufferB, CL_FALSE, 0, b_size, in1.data(),
                                    0, NULL, &writeBufferEvents[1]);
         if( err != CL_SUCCESS ){ return err; }
 
@@ -366,13 +367,13 @@ namespace tensorflow {
 
         // debugOpenclKernel(clTransKernel, clDevice);
 
-        if( MatATranspose && MatBTranspose ){
+        if( a_traspose && b_traspose ){
 
           if (
             clSetKernelArg(clTransKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &a) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &a_T) != CL_SUCCESS
+            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS
           ){
             LOG(ERROR) << "clSetKernelArg fail";
             return CL_FALSE;
@@ -390,9 +391,9 @@ namespace tensorflow {
             clSetKernelArg(clGemmKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 1, sizeof(int), &RowA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 2, sizeof(int), &RowB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a_T) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) != CL_SUCCESS
           ){
             LOG(ERROR) << "clSetKernelArg fail";
@@ -412,13 +413,13 @@ namespace tensorflow {
           clWaitForEvents(1, &gemmKernelEvent);
 
 
-        }else if( MatATranspose && !MatBTranspose ){
+        }else if( a_traspose && !b_traspose ){
 
           if (
             clSetKernelArg(clTransKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &a) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &a_T) != CL_SUCCESS
+            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS
           ){
             LOG(ERROR) << "clSetKernelArg fail";
             return CL_FALSE;
@@ -434,8 +435,8 @@ namespace tensorflow {
           if (
             clSetKernelArg(clTransKernel, 0, sizeof(int), &RowB) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 1, sizeof(int), &ColB) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &b) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &b_T) != CL_SUCCESS
+            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS
           ){
             LOG(ERROR) << "clSetKernelArg fail";
             return CL_FALSE;
@@ -453,9 +454,9 @@ namespace tensorflow {
             clSetKernelArg(clGemmKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 1, sizeof(int), &RowA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 2, sizeof(int), &ColB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a_T) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b_T) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 6, RowA * sizeof(float), NULL) != CL_SUCCESS
           ){
             LOG(ERROR) << "clSetKernelArg fail";
@@ -474,16 +475,16 @@ namespace tensorflow {
           // Wait for kernel computation
           clWaitForEvents(1, &gemmKernelEvent);
 
-        }else if( !MatATranspose && MatBTranspose ){
+        }else if( !a_traspose && b_traspose ){
 
           // Set OpenCL kernel arguments
           if (
             clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 2, sizeof(int), &RowB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) != CL_SUCCESS
           ){
             LOG(ERROR) << "clSetKernelArg fail";
@@ -502,13 +503,13 @@ namespace tensorflow {
           // Wait for kernel computation
           clWaitForEvents(1, &gemmKernelEvent);
 
-        }else if( !MatATranspose && !MatBTranspose ){
+        }else if( !a_traspose && !b_traspose ){
 
           if (
             clSetKernelArg(clTransKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 1, sizeof(int), &ColB) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &b) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &b_T) != CL_SUCCESS
+            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS
           ){
             LOG(ERROR) << "clSetKernelArg fail";
             return CL_FALSE;
@@ -526,9 +527,9 @@ namespace tensorflow {
             clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 2, sizeof(int), &ColB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b_T) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) != CL_SUCCESS
           ){
             LOG(ERROR) << "clSetKernelArg fail";
@@ -554,11 +555,11 @@ namespace tensorflow {
     private:
 
       // OpenCL memeory object
-      cl_mem a;
-      cl_mem a_T;
-      cl_mem b;
-      cl_mem b_T;
-      cl_mem c;
+      cl_mem clBufferA;
+      cl_mem clBufferA_T;
+      cl_mem clBufferB;
+      cl_mem clBufferB_T;
+      cl_mem clBufferC;
 
       // OpenCL events
       cl_event gemmKernelEvent;
@@ -575,15 +576,15 @@ namespace tensorflow {
   };  // class clQualcommEngine
 
   // clLoaderEngine concrete class using customized cl kernel
-  class clLoaderEngine : public binaryLoaderInterface, public clEngine<float>{
+  class clLoaderEngine : public binaryLoaderInterface, public clMatMulEngine<float>{
     public:
 
       cl_int clEnd(){
 
         // Free OpenCL memory objects
-        clReleaseMemObject(a);
-        clReleaseMemObject(b);
-        clReleaseMemObject(c);
+        clReleaseMemObject(clBufferA);
+        clReleaseMemObject(clBufferB);
+        clReleaseMemObject(clBufferC);
 
         // Free OpenCL kernel
         clReleaseKernel(clGemmKernel);
@@ -613,9 +614,9 @@ namespace tensorflow {
         // Init cl err code
         err = CL_SUCCESS;
 
-        // Use the map function to return a pointer to the host <= blocking
-        clHostPtrC = ( cl_float * ) clEnqueueMapBuffer(clQueue, c, CL_TRUE,
-                          CL_MAP_READ, 0, out_size, 0, NULL, NULL, &err);
+        // Use the map function to return clBufferA pointer to the host <= blocking
+        clHostPtrC = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferC, CL_TRUE,
+                          CL_MAP_READ, 0, c_size, 0, NULL, NULL, &err);
 
         // Read results
         if( err == CL_SUCCESS ){
@@ -650,17 +651,17 @@ namespace tensorflow {
 
         // Use zero copy to avoid memeory copy
         // Matrix A
-        a = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                          in0_size, NULL, NULL);
-        // Use the map function to return a pointer to the host <= non-blocking
-        clHostPtrA = ( cl_float * ) clEnqueueMapBuffer(clQueue, a, CL_FALSE,
-                          CL_MAP_WRITE, 0, in0_size, 0, NULL, &mapBufferEvents[0], NULL);
+        clBufferA = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                          a_size, NULL, NULL);
+        // Use the map function to return clBufferA pointer to the host <= non-blocking
+        clHostPtrA = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferA, CL_FALSE,
+                          CL_MAP_WRITE, 0, a_size, 0, NULL, &mapBufferEvents[0], NULL);
         // Matrix B
-        b = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                          in1_size, NULL, NULL);
-        // Use the map function to return a pointer to the host <= non-blocking
-        clHostPtrB = ( cl_float * ) clEnqueueMapBuffer(clQueue, b, CL_FALSE,
-                          CL_MAP_WRITE, 0, in1_size, 0, NULL, &mapBufferEvents[1], NULL);
+        clBufferB = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                          b_size, NULL, NULL);
+        // Use the map function to return clBufferA pointer to the host <= non-blocking
+        clHostPtrB = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferB, CL_FALSE,
+                          CL_MAP_WRITE, 0, b_size, 0, NULL, &mapBufferEvents[1], NULL);
 
         // Wait for completion
         clWaitForEvents(2, mapBufferEvents);
@@ -675,7 +676,7 @@ namespace tensorflow {
         }
 
         // Unmap the object -> Used in the OpenCL kernel
-        err = clEnqueueUnmapMemObject( clQueue, a, (void*) clHostPtrA, 0, NULL,
+        err = clEnqueueUnmapMemObject( clQueue, clBufferA, (void*) clHostPtrA, 0, NULL,
                                       &unMapBufferEvents[0] );
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueUnmapMemObject fail with code " << err;
@@ -683,7 +684,7 @@ namespace tensorflow {
         }
 
         // Unmap the object -> Used in the OpenCL kernel
-        err = clEnqueueUnmapMemObject( clQueue, b, (void*) clHostPtrB, 0, NULL,
+        err = clEnqueueUnmapMemObject( clQueue, clBufferB, (void*) clHostPtrB, 0, NULL,
                                       &unMapBufferEvents[1] );
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueUnmapMemObject fail with code " << err;
@@ -691,8 +692,8 @@ namespace tensorflow {
         }
 
         // Matrix C
-        c = clCreateBuffer(clCtx, CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                          out_size, NULL, NULL);
+        clBufferC = clCreateBuffer(clCtx, CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                          c_size, NULL, NULL);
 
         // Wait for completion
         clWaitForEvents(2, unMapBufferEvents);
@@ -740,9 +741,9 @@ namespace tensorflow {
           clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
           clSetKernelArg(clGemmKernel, 2, sizeof(int), &ColB) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &a) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &b) != CL_SUCCESS ||
-          clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &c) != CL_SUCCESS
+          clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
+          clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS
         ){
           LOG(ERROR) << "clSetKernelArg fail";
         }
@@ -764,9 +765,9 @@ namespace tensorflow {
     private:
 
       // OpenCL memeory object
-      cl_mem a;
-      cl_mem b;
-      cl_mem c;
+      cl_mem clBufferA;
+      cl_mem clBufferB;
+      cl_mem clBufferC;
 
       // OpenCL events
       cl_event gemmKernelEvent;
@@ -787,15 +788,15 @@ namespace tensorflow {
   };  // class clLoaderEngine
 
   // clBLASTEngine concrete class using CLBLAST API
-  class clBLASTEngine : public clEngine<float>{
+  class clBLASTEngine : public clMatMulEngine<float>{
     public:
 
       cl_int clEnd(){
 
         // Free OpenCL memory objects
-        clReleaseMemObject(a);
-        clReleaseMemObject(b);
-        clReleaseMemObject(c);
+        clReleaseMemObject(clBufferA);
+        clReleaseMemObject(clBufferB);
+        clReleaseMemObject(clBufferC);
 
         // Free OpenCL command queue
         clReleaseCommandQueue(clQueue);
@@ -818,7 +819,7 @@ namespace tensorflow {
         err = CL_SUCCESS;
 
         // Read results
-        err = clEnqueueReadBuffer(clQueue, c, CL_TRUE, 0, out_size, out.data(), 0, NULL, NULL);
+        err = clEnqueueReadBuffer(clQueue, clBufferC, CL_TRUE, 0, c_size, out.data(), 0, NULL, NULL);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clEnqueueReadBuffer fail with code " << err;
           return err;
@@ -845,16 +846,16 @@ namespace tensorflow {
         err = CL_SUCCESS;
 
         // Allocate memory buffers
-        a = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in0_size, NULL, NULL);
-        b = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, in1_size, NULL, NULL);
-        c = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, out_size, NULL, NULL);
+        clBufferA = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, a_size, NULL, NULL);
+        clBufferB = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, b_size, NULL, NULL);
+        clBufferC = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, c_size, NULL, NULL);
 
         // Enqueue write buffer commands (acynchronous write)
-        err = clEnqueueWriteBuffer(clQueue, a, CL_FALSE, 0, in0_size, in0.data(),
+        err = clEnqueueWriteBuffer(clQueue, clBufferA, CL_FALSE, 0, a_size, in0.data(),
                                    0, NULL, &writeBufferEvents[0]);
         if( err != CL_SUCCESS ){ return err; }
 
-        err = clEnqueueWriteBuffer(clQueue, b, CL_FALSE, 0, in1_size, in1.data(),
+        err = clEnqueueWriteBuffer(clQueue, clBufferB, CL_FALSE, 0, b_size, in1.data(),
                                    0, NULL, &writeBufferEvents[1]);
         if( err != CL_SUCCESS ){ return err; }
 
@@ -906,10 +907,10 @@ namespace tensorflow {
                                                 MatATranspose, MatBTranspose,
                                                 RowA, ColB, ColA,
                                                 alpha,
-                                                a, 0, a_ld,
-                                                b, 0, b_ld,
+                                                clBufferA, 0, a_ld,
+                                                clBufferB, 0, b_ld,
                                                 beta,
-                                                c, 0, c_ld,
+                                                clBufferC, 0, c_ld,
                                                 &clQueue, &gemmKernelEvent);
 
         // Wait for completion
@@ -925,9 +926,9 @@ namespace tensorflow {
     private:
 
       // OpenCL memeory object
-      cl_mem a;
-      cl_mem b;
-      cl_mem c;
+      cl_mem clBufferA;
+      cl_mem clBufferB;
+      cl_mem clBufferC;
 
       // OpenCL events
       cl_event gemmKernelEvent;
