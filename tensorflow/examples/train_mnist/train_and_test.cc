@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
   runner.tensorInit(batchSize, input_width*input_height);
 
   for( auto beginIdx = 0 ; beginIdx < mnist.getTrainingDataSize() - batchSize;
-    beginIdx = beginIdx + batchSize )
+    beginIdx = beginIdx + batchSize/2 )
   {
 
     LOG(INFO) << beginIdx << " trained.";
@@ -141,7 +141,7 @@ int main(int argc, char* argv[]) {
     runner.sessionTrain(session, inputOpsName, outputOpsName, dropoutOpsName);
 
     // Do overall testing for each 1000 data trained
-    if( beginIdx % batchSize == 0 )
+    if( beginIdx % (5*batchSize) == 0 )
     {
       vector<double> avg_accu;
 

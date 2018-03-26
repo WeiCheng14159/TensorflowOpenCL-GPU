@@ -67,7 +67,7 @@ cc_library(
 cc_binary(
   name = "train_and_test_mnist",
   srcs = [
-      "trainAndTest.cc",
+      "train_and_test.cc",
       "util.h",
       "tfRunner.h",
       "tfRunner.cc",
