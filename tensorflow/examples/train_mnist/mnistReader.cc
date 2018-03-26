@@ -69,8 +69,7 @@ int mnistReader::getTrainingDataSize(){
 
 // getTestingDataSize
 int mnistReader::getTestingDataSize(){
-  // return testDataSize;
-  return 1000;
+  return testDataSize;
 }
 
 // getImgSize
