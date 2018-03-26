@@ -37,7 +37,7 @@ public:
 
   // Copy data to Tensors
   void copyToTensor( const vector<float>& inputVector,
-    const vector<long int>& outputVector, const vector<float>& dropoutProb );
+    const vector<float>& outputVector, const vector<float>& dropoutProb );
 
   // Init session
   void sessInit(unique_ptr<Session>& sess);

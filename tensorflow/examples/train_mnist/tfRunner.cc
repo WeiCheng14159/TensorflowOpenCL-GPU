@@ -23,18 +23,18 @@ tfRunner::tfRunner(const string& initOps,
 void tfRunner::tensorInit(int batchSize, int inputSize)
 {
   inputTensor = Tensor( DT_FLOAT, TensorShape( { batchSize, inputSize } ));
-  outputTensor = Tensor( DT_INT64, TensorShape( { batchSize } ));
+  outputTensor = Tensor( DT_FLOAT, TensorShape( { batchSize, 10       } ));
   dropoutTensor = Tensor( DT_FLOAT, TensorShape( { 1 } ) );
 }
 
 // Copy data to Tensors
 void tfRunner::copyToTensor( const vector<float>& inputVector,
-    const vector<long int>& outputVector, const vector<float>& dropoutProb )
+    const vector<float>& outputVector, const vector<float>& dropoutProb )
 {
   copy_n(inputVector.begin(), inputVector.size(),
     inputTensor.flat<float>().data() );
   copy_n(outputVector.begin(), outputVector.size(),
-    outputTensor.flat<long long>().data() );
+    outputTensor.flat<float>().data() );
   copy_n(dropoutProb.begin(), dropoutProb.size(),
     dropoutTensor.flat<float>().data() );
 }

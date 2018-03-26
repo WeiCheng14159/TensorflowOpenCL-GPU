@@ -14,7 +14,7 @@ mnistReader::mnistReader(string path){
 
 // Training Batch
 void mnistReader::getTrainingBatch(int beginIdx, int batchSize,
-  vector<float>* batchImgVec, vector<long int>* batchLabelVec)
+  vector<float>* batchImgVec, vector<float>* batchLabelVec)
 {
     // Boundary checking
     if( beginIdx + batchSize > trainDataSize){
@@ -29,13 +29,17 @@ void mnistReader::getTrainingBatch(int beginIdx, int batchSize,
         }
 
         uint8_t vecLabel = dataset.training_labels[ idx ];
-        batchLabelVec->push_back( static_cast<long int>(vecLabel) );
+
+        float oneHotLabelVec[10] = {0,0,0,0,0,0,0,0,0,0};
+        oneHotLabelVec[vecLabel] = 1.0f;
+
+        batchLabelVec->insert(batchLabelVec->end(), oneHotLabelVec, oneHotLabelVec+10);
     }
 }
 
 // Testing Batch
 void mnistReader::getTestingBatch(int beginIdx, int batchSize,
-  vector<float>* batchImgVec, vector<long int>* batchLabelVec)
+  vector<float>* batchImgVec, vector<float>* batchLabelVec)
 {
   // Boundary checking
   if( beginIdx + batchSize > testDataSize){
@@ -50,7 +54,11 @@ void mnistReader::getTestingBatch(int beginIdx, int batchSize,
       }
 
       uint8_t vecLabel = dataset.test_labels[ idx ];
-      batchLabelVec->push_back( static_cast<long int>(vecLabel) );
+
+      float oneHotLabelVec[10] = {0,0,0,0,0,0,0,0,0,0};
+      oneHotLabelVec[vecLabel] = 1.0f;
+
+      batchLabelVec->insert(batchLabelVec->end(), oneHotLabelVec, oneHotLabelVec+10);
   }
 }
 
@@ -61,7 +69,8 @@ int mnistReader::getTrainingDataSize(){
 
 // getTestingDataSize
 int mnistReader::getTestingDataSize(){
-  return testDataSize;
+  // return testDataSize;
+  return 1000;
 }
 
 // getImgSize

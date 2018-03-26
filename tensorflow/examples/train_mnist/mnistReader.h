@@ -19,11 +19,11 @@ public:
 
   // Training Batch
   void getTrainingBatch(int beginIdx, int batchSize,
-    vector<float>* batchImgVec, vector<long int>* batchLabelVec);
+    vector<float>* batchImgVec, vector<float>* batchLabelVec);
 
   // Testing Batch
   void getTestingBatch(int beginIdx, int batchSize,
-    vector<float>* batchImgVec, vector<long int>* batchLabelVec);
+    vector<float>* batchImgVec, vector<float>* batchLabelVec);
 
   // getTrainingDataSize
   int getTrainingDataSize();

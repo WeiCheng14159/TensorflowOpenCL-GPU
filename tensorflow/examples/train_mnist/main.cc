@@ -132,11 +132,11 @@ int main(int argc, char* argv[]) {
     // image vector with dimension { 1, batchSize x input_width x input_height }
     vector<float> batchTrainImgFloatVec;
     // label vector with dimension { 1, batchSize }
-    vector<long int> batchTrainLabelInt64Vec;
+    vector<float> batchTrainLabelFloatVec;
 
-    mnist.getTrainingBatch(beginIdx, batchSize, &batchTrainImgFloatVec, &batchTrainLabelInt64Vec);
+    mnist.getTrainingBatch(beginIdx, batchSize, &batchTrainImgFloatVec, &batchTrainLabelFloatVec);
 
-    runner.copyToTensor(batchTrainImgFloatVec, batchTrainLabelInt64Vec, dropProb);
+    runner.copyToTensor(batchTrainImgFloatVec, batchTrainLabelFloatVec, dropProb);
 
     runner.sessionTrain(session, inputOpsName, outputOpsName, dropoutOpsName);
 
@@ -154,14 +154,14 @@ int main(int argc, char* argv[]) {
         // image vector with dimension { 1, batchSize x input_width x input_height }
         vector<float> batchTestImgFloatVec;
         // label vector with dimension { 1, batchSize }
-        vector<long int> batchTestLabelInt64Vec;
+        vector<float> batchTestLabelFloatVec;
 
-        mnist.getTestingBatch(beginIdx, batchSize, &batchTestImgFloatVec, &batchTestLabelInt64Vec);
+        mnist.getTestingBatch(beginIdx, batchSize, &batchTestImgFloatVec, &batchTestLabelFloatVec);
 
         // No drop out layer when testing
         dropProb[0] = 1.0f;
 
-        runner.copyToTensor(batchTestImgFloatVec, batchTestLabelInt64Vec, dropProb);
+        runner.copyToTensor(batchTestImgFloatVec, batchTestLabelFloatVec, dropProb);
 
         double acc = runner.sessionTest(session, inputOpsName, outputOpsName, dropoutOpsName);
 
