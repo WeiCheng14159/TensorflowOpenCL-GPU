@@ -706,7 +706,7 @@ namespace tensorflow {
           clHostPtrA[ idx ] = in0.data()[idx];
         }
         // Host update the buffer using pointer clHostPtrB in host address space
-        for( auto idx = 0 ; idx < ColA*ColB ; idx ++){
+        for( auto idx = 0 ; idx < RowB*ColB ; idx ++){
           clHostPtrB[ idx ] = in1.data()[idx];
         }
 
