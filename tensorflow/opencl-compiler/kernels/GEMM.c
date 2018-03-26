@@ -172,9 +172,12 @@ void MatrixMatrixMulOptimizedTN(const int matrixRowsA,
         // Use Local Memory to cache BTranspose's rows
         // Fill in the portion of BTranspose's row that this work-item is responsible for
         int offset = j*matrixColsARowsB;
-        for(int k=lid; (((k&3)==0) && k<matrixColsARowsB); k+=lsize)
+        for(int k=lid; k<matrixColsARowsB; k+=lsize)
         {
+          if( (k & 3) == 0 ){ // k% 4 == 0
+            // printf("gid %d cache matrixBTranspose[%d] to dataCacheB[%d]\n", gid, k+offset, k);
             *((__local float4*)&dataCacheB[k]) = *((__global float4*)&matrixBTranspose[k+offset]);
+          }
         }
 
         // Insert a barrier so all work-items in the workgroup wait until dataCacheB is filled
