@@ -99,7 +99,7 @@ def main(_):
         sess.run(init)
 
         # Logger Init
-        summary_writer = tf.summary.FileWriter( FLAGS.logDir, graph=sess.graph)
+        summaryWriter = tf.summary.FileWriter(FLAGS.logDir, graph=sess.graph)
 
         # Training
         for step in range(maxEpochs):
@@ -113,13 +113,13 @@ def main(_):
                     feed_dict={X: mnist.test.images, Y: mnist.test.labels})
 
                 # Write accuracy to log file
-                summary_writer.add_summary(summary, step)
+                summaryWriter.add_summary(summary, step)
 
                 # Print accuracy
                 print('step %d, training accuracy %f' % (step, acc))
 
             # Run training op
-            train_op.run( feed_dict={ X: batchImage, Y: batchLabel }, session=sess)
+            train_op.run( feed_dict={ X: batchImage, Y: batchLabel })
 
         # Write TF model
         tf.train.write_graph(sess.graph_def,
@@ -139,5 +139,5 @@ if __name__ == '__main__':
     parser.add_argument('--testStep', type=int, default=100,
                         help='Test model accuracy for every testStep iterations')
     FLAGS, unparsed = parser.parse_known_args()
-    # Program entry 
+    # Program entry
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
