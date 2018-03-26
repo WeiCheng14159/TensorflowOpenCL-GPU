@@ -1,14 +1,14 @@
 import tensorflow as tf
 import numpy as np
 
-x = tf.placeholder(tf.float32, [None, 5], name="x")
-y = tf.placeholder(tf.float32, [None, 5], name="y")
+x = tf.placeholder(tf.float32, [None, 256], name="x")
+y = tf.placeholder(tf.float32, [None, 10], name="y")
 
-w1 = tf.Variable(tf.truncated_normal([5, 5], stddev=0.1))
-b1 = tf.Variable(tf.constant(0.0, shape=[5]))
+w1 = tf.Variable(tf.truncated_normal([256, 128], stddev=0.1))
+b1 = tf.Variable(tf.constant(0.0, shape=[128]))
 
-w2 = tf.Variable(tf.truncated_normal([5, 5], stddev=0.1))
-b2 = tf.Variable(tf.constant(0.0, shape=[5]))
+w2 = tf.Variable(tf.truncated_normal([128, 10], stddev=0.1))
+b2 = tf.Variable(tf.constant(0.0, shape=[10]))
 
 a = tf.nn.tanh(tf.nn.bias_add(tf.matmul(x, w1), b1))
 y_out = tf.nn.tanh(tf.nn.bias_add(tf.matmul(a, w2), b2), name="y_out")
@@ -24,8 +24,8 @@ tf.train.write_graph(sess.graph_def,
                      './',
                      'mlp.pb', as_text=False)
 
-target_x = np.random.rand(100,5)
-target_y = np.random.rand(100,5)
+target_x = np.random.rand(100,256)
+target_y = np.random.rand(100,10)
 
 initial_cost = sess.run(cost, feed_dict={ x: target_x, y: target_y })
 print( "initial cost %f" % initial_cost )
