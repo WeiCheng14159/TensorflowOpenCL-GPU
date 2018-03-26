@@ -65,9 +65,9 @@ cc_library(
 )
 
 cc_binary(
-  name = "train_mnist",
+  name = "train_and_test_mnist",
   srcs = [
-      "main.cc",
+      "trainAndTest.cc",
       "util.h",
       "tfRunner.h",
       "tfRunner.cc",
@@ -80,5 +80,24 @@ cc_binary(
       ":mnistReader",
       ":tf_runner_lib",
       "//external:libTFlogger",
+  ],
+)
+
+
+cc_binary(
+  name = "train_mnist",
+  srcs = [
+      "train_mnist.cc",
+      "util.h",
+      "tfRunner.h",
+      "tfRunner.cc",
+  ],
+  copts = ANDROID_C_OPTS,
+  linkopts = ANDROID_LINK_OPTS,
+  deps = [
+      "//tensorflow/cc:cc_ops",
+      "//tensorflow/core:android_tensorflow_lib",
+      ":mnistReader",
+      ":tf_runner_lib",
   ],
 )

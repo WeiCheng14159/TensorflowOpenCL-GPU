@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
     // Do overall testing for each 1000 data trained
     if( beginIdx % batchSize == 0 )
     {
-      vector<float> avg_accu;
+      vector<double> avg_accu;
 
       for( auto beginIdx = 0 ; beginIdx < mnist.getTestingDataSize() - batchSize;
         beginIdx = beginIdx + batchSize )

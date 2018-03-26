@@ -1,6 +1,6 @@
 #!/bin/bash
 
-bazel build --config=android_arm64 //tensorflow/examples/train_mnist:train_mnist \
+bazel build --config=android_arm64 //tensorflow/examples/train_mnist/... \
   --verbose_failures \
   --cxxopt="-std=c++11" \
   --cxxopt="-DSELECTIVE_REGISTRATION" \
@@ -11,6 +11,7 @@ REMOTE_DIR='/data/local/tmp'
 
 # Compiled binary code
 adb push ../../../bazel-bin/tensorflow/examples/train_mnist/train_mnist $REMOTE_DIR
+adb push ../../../bazel-bin/tensorflow/examples/train_mnist/train_and_test_mnist $REMOTE_DIR
 
 # Send MNIST dataset to the phone. Notice that you should first create a
 # MNIST_data directory using normal priviledge first
