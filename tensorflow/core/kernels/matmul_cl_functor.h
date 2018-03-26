@@ -261,8 +261,10 @@ namespace tensorflow {
         clReleaseEvent(transKernelEvent[0]);
         clReleaseEvent(transKernelEvent[1]);
         clReleaseEvent(gemmKernelEvent);
-        clReleaseEvent(writeBufferEvents[0]);
-        clReleaseEvent(writeBufferEvents[1]);
+        clReleaseEvent(mapBufferEvents[0]);
+        clReleaseEvent(mapBufferEvents[1]);
+        clReleaseEvent(unMapBufferEvents[0]);
+        clReleaseEvent(unMapBufferEvents[1]);
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -273,11 +275,19 @@ namespace tensorflow {
         // Init cl err code
         err = CL_SUCCESS;
 
+        // Use the map function to return clBufferA pointer to the host <= blocking
+        clHostPtrC = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferC, CL_TRUE,
+                          CL_MAP_READ, 0, c_size, 0, NULL, NULL, &err);
+
         // Read results
-        err = clEnqueueReadBuffer(clQueue, clBufferC, CL_TRUE, 0, c_size, out.data(), 0, NULL, NULL);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clEnqueueReadBuffer fail with code " << err;
-          return err;
+        if( err == CL_SUCCESS ){
+          // Read computed result back to host
+          for( auto idx = 0 ; idx < RowC*ColC ; idx++){
+            out.data()[idx] = clHostPtrC[idx];
+          }
+        }else{
+          LOG(ERROR) << "Host-side pointer for matrix C is invalid";
+          return CL_FALSE;
         }
 
         // Release OpenCL resources
@@ -296,28 +306,65 @@ namespace tensorflow {
         typename functor::MatMulTypes<float>::in_type in1,
         typename functor::MatMulTypes<float>::out_type out)
       {
-
         // Init cl err code
         err = CL_SUCCESS;
 
-        // Allocate memory buffers
-        clBufferA = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, a_size, NULL, NULL);
-        clBufferA_T = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, a_size, NULL, NULL);
-        clBufferB = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, b_size, NULL, NULL);
-        clBufferB_T = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, b_size, NULL, NULL);
-        clBufferC = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, c_size, NULL, NULL);
+        // Use zero copy to avoid memeory copy
+        // Matrix A
+        clBufferA = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                          a_size, NULL, NULL);
+        // Use the map function to return clBufferA pointer to the host <= non-blocking
+        clHostPtrA = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferA, CL_FALSE,
+                          CL_MAP_WRITE, 0, a_size, 0, NULL, &mapBufferEvents[0], NULL);
+        // Matrix B
+        clBufferB = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                          b_size, NULL, NULL);
+        // Use the map function to return clBufferA pointer to the host <= non-blocking
+        clHostPtrB = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferB, CL_FALSE,
+                          CL_MAP_WRITE, 0, b_size, 0, NULL, &mapBufferEvents[1], NULL);
 
-        // Enqueue write buffer commands (acynchronous write)
-        err = clEnqueueWriteBuffer(clQueue, clBufferA, CL_FALSE, 0, a_size, in0.data(),
-                                   0, NULL, &writeBufferEvents[0]);
-        if( err != CL_SUCCESS ){ return err; }
-
-        err = clEnqueueWriteBuffer(clQueue, clBufferB, CL_FALSE, 0, b_size, in1.data(),
-                                   0, NULL, &writeBufferEvents[1]);
-        if( err != CL_SUCCESS ){ return err; }
+        // Create GPU buffer for transposed matrices only if needed
+        if( a_traspose ){
+          clBufferA_T = clCreateBuffer(clCtx, CL_MEM_HOST_NO_ACCESS, a_size, NULL, NULL);
+        }
+        if( !b_traspose ){
+          clBufferB_T = clCreateBuffer(clCtx, CL_MEM_HOST_NO_ACCESS, b_size, NULL, NULL);
+        }
 
         // Wait for completion
-        clWaitForEvents(2, writeBufferEvents);
+        clWaitForEvents(2, mapBufferEvents);
+
+        // Host update the buffer using pointer clHostPtrA in host address space
+        for( auto idx = 0 ; idx < RowA*ColA ; idx ++){
+          clHostPtrA[ idx ] = in0.data()[idx];
+        }
+        // Host update the buffer using pointer clHostPtrB in host address space
+        for( auto idx = 0 ; idx < RowB*ColB ; idx ++){
+          clHostPtrB[ idx ] = in1.data()[idx];
+        }
+
+        // Unmap the object -> Used in the OpenCL kernel
+        err = clEnqueueUnmapMemObject( clQueue, clBufferA, (void*) clHostPtrA, 0, NULL,
+                                      &unMapBufferEvents[0] );
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnqueueUnmapMemObject fail with code " << err;
+          return err;
+        }
+
+        // Unmap the object -> Used in the OpenCL kernel
+        err = clEnqueueUnmapMemObject( clQueue, clBufferB, (void*) clHostPtrB, 0, NULL,
+                                      &unMapBufferEvents[1] );
+        if( err != CL_SUCCESS ){
+          LOG(ERROR) << "clEnqueueUnmapMemObject fail with code " << err;
+          return err;
+        }
+
+        // Matrix C
+        clBufferC = clCreateBuffer(clCtx, CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                          c_size, NULL, NULL);
+
+        // Wait for completion
+        clWaitForEvents(2, unMapBufferEvents);
         return CL_SUCCESS;
       }
 
@@ -543,10 +590,16 @@ namespace tensorflow {
       cl_mem clBufferB_T;
       cl_mem clBufferC;
 
+      // Copied memory data
+      cl_float * clHostPtrA;
+      cl_float * clHostPtrB;
+      cl_float * clHostPtrC;
+
       // OpenCL events
       cl_event gemmKernelEvent;
       cl_event transKernelEvent[2];
-      cl_event writeBufferEvents[2];
+      cl_event mapBufferEvents[2];
+      cl_event unMapBufferEvents[2];
 
       // OpenCL program object
       cl_program clProgram;
