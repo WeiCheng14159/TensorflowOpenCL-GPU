@@ -12,3 +12,6 @@ bazel build --config=android_arm64 :$TARGET \
 REMOTE_DIR="/data/local/tmp"
 adb push ../../bazel-bin/tensorflow/$TARGET/$TARGET $REMOTE_DIR
 adb push matmul.pb $REMOTE_DIR
+adb push testMatmul.sh $REMOTE_DIR
+adb push testSquare.sh $REMOTE_DIR
+adb push testExpSquare.sh $REMOTE_DIR
