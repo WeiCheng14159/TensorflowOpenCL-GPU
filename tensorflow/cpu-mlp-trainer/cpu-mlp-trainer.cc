@@ -28,13 +28,18 @@ int main(int argc, char* argv[]) {
     // Initialize our variables
     TF_CHECK_OK(session->Run({}, {}, {"init_all_vars_op"}, nullptr));
 
+    // Read in batch size from command line
     int batch_size = atoi( argv[1] );
 
-    Tensor x(DT_FLOAT, TensorShape({batch_size, 5}));
-    Tensor y(DT_FLOAT, TensorShape({batch_size, 5}));
+    // Tensor initializaiotn
+    Tensor x(DT_FLOAT, TensorShape({batch_size, 256}));
+    Tensor y(DT_FLOAT, TensorShape({batch_size, 10}));
+
+    // Convert TensorFlow Tensor -> Eigen Matrix
     auto _XTensor = x.matrix<float>();
     auto _YTensor = y.matrix<float>();
 
+    // Initialize Matrix size with random number
     _XTensor.setRandom();
     _YTensor.setRandom();
 
