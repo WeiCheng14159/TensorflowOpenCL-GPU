@@ -153,7 +153,7 @@ void MatrixTranspose(const int rows,
 __kernel
 __attribute__((vec_type_hint(float4)))
 __attribute__((reqd_work_group_size(16, 0, 0)))
-void MatrixMatrixMulOptimized(const int matrixRowsA,
+void MatrixMatrixMulOptimizedTN(const int matrixRowsA,
                                         const int matrixColsARowsB,
                                         const int matrixColsB,
                                         __global float* matrixA,
