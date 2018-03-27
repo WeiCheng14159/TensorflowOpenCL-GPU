@@ -47,6 +47,19 @@ namespace tensorflow {
         RowC = out.dimension(0);
         ColC = out.dimension(1);
 
+        int matrixSizeLimit = 0xffff;
+
+        if( RowA > matrixSizeLimit ||
+            ColA > matrixSizeLimit ||
+            RowB > matrixSizeLimit ||
+            ColB > matrixSizeLimit ||
+            RowC > matrixSizeLimit ||
+            ColC > matrixSizeLimit )
+        {
+          LOG(ERROR) << "Matrix of Size Larger than " << matrixSizeLimit <<
+          " isn't supported";
+        }
+
         // Matrix size init
         a_size = sizeof(T) * RowA * ColA;
         b_size = sizeof(T) * RowB * ColB;
@@ -404,8 +417,8 @@ namespace tensorflow {
         if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
           if (
-            clSetKernelArg(clTransKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS
           ){
@@ -421,9 +434,9 @@ namespace tensorflow {
           }
 
           if (
-            clSetKernelArg(clGemmKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 1, sizeof(int), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 2, sizeof(int), &RowB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
@@ -446,8 +459,8 @@ namespace tensorflow {
         }else if( a_traspose && !b_traspose ){ // Transpose A: yes, Transpose B: no
 
           if (
-            clSetKernelArg(clTransKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS
           ){
@@ -463,8 +476,8 @@ namespace tensorflow {
           }
 
           if (
-            clSetKernelArg(clTransKernel, 0, sizeof(int), &RowB) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 1, sizeof(int), &ColB) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowB) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS
           ){
@@ -480,9 +493,9 @@ namespace tensorflow {
           }
 
           if (
-            clSetKernelArg(clGemmKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 1, sizeof(int), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 2, sizeof(int), &ColB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
@@ -505,9 +518,9 @@ namespace tensorflow {
         }else if( !a_traspose && b_traspose ){ // Transpose A: no, Transpose B: yes
 
           if (
-            clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 2, sizeof(int), &RowB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
@@ -530,8 +543,8 @@ namespace tensorflow {
         }else if( !a_traspose && !b_traspose ){ // Transpose A: no, Transpose B: no
 
           if (
-            clSetKernelArg(clTransKernel, 0, sizeof(int), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 1, sizeof(int), &ColB) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
             clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS
           ){
@@ -547,9 +560,9 @@ namespace tensorflow {
           }
 
           if (
-            clSetKernelArg(clGemmKernel, 0, sizeof(int), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 1, sizeof(int), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 2, sizeof(int), &ColB) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
+            clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS ||
             clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||

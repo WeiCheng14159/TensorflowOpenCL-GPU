@@ -16,9 +16,9 @@
 //--------------------------------------------------------------------------------------
 __attribute__((vec_type_hint(float4)))
 __attribute__((reqd_work_group_size(16, 16, 0)))
-__kernel void MatrixMatrixMulSimple(const int matrixRowsA,
-                                    const int matrixColsARowsB,
-                                    const int matrixColsB,
+__kernel void MatrixMatrixMulSimple(const ushort matrixRowsA,
+                                    const ushort matrixColsARowsB,
+                                    const ushort matrixColsB,
                                     __global float* matrixA,
                                     __global float* matrixB,
                                     __global float* matrixProduct)
@@ -49,9 +49,9 @@ __kernel void MatrixMatrixMulSimple(const int matrixRowsA,
 #define LOCAL_MEM_SIZE 16
 __attribute__((vec_type_hint(float4)))
 __attribute__((reqd_work_group_size(LOCAL_MEM_SIZE, LOCAL_MEM_SIZE, 0)))
-__kernel void MatrixMatrixMulOptimized2D( const int matrixRowsA,
-                                          const int matrixColsARowsB,
-                                          const int matrixColsB,
+__kernel void MatrixMatrixMulOptimized2D( const ushort matrixRowsA,
+                                          const ushort matrixColsARowsB,
+                                          const ushort matrixColsB,
                                           const __global float* matrixA,
                                           const __global float* matrixB,
                                           __global float* matrixProduct )
@@ -107,8 +107,8 @@ __kernel void MatrixMatrixMulOptimized2D( const int matrixRowsA,
 __kernel
 __attribute__((vec_type_hint(float4)))
 __attribute__((reqd_work_group_size(32, 0, 0)))
-void MatrixTranspose(const int rows,
-                              const int cols,
+void MatrixTranspose(const ushort rows,
+                              const ushort cols,
                               __global float* matrix,
                               __global float* matrixTranspose)
 {
@@ -134,7 +134,7 @@ void MatrixTranspose(const int rows,
         indexSrc += 4;
     }
 
-    for( int i = 0 ; i < fmod(cols, 4.0f) ; i++ ){
+    for( int i = 0 ; i < (cols & 3) ; i++ ){
         float tmp2 = (*((__global float*)&matrix[indexSrc+i]));
 
         matrixTranspose[gid+offset] = tmp2;
@@ -153,26 +153,26 @@ void MatrixTranspose(const int rows,
 __kernel
 __attribute__((vec_type_hint(float4)))
 __attribute__((reqd_work_group_size(16, 0, 0)))
-void MatrixMatrixMulOptimizedTN(const int matrixRowsA,
-                                        const int matrixColsARowsB,
-                                        const int matrixColsB,
+void MatrixMatrixMulOptimizedTN(const ushort matrixRowsA,
+                                        const ushort matrixColsARowsB,
+                                        const ushort matrixColsB,
                                         __global float* matrixA,
                                         __global float* matrixBTranspose,
                                         __global float* matrixProduct,
                      __local float* dataCacheB)
 {
-    int gid = get_global_id(0);
-    int lid = get_local_id(0);
-    int lsize = get_local_size(0);
-    int resultIndex = gid*matrixColsB;
-    int iters = matrixColsARowsB >> 2;
+    ushort gid = get_global_id(0);
+    ushort lid = get_local_id(0);
+    ushort lsize = get_local_size(0);
+    int resultIndex = mul24(gid, matrixColsB);
+    ushort iters = matrixColsARowsB >> 2;
 
-    for(int j=0; j < matrixColsB; j++)
+    for(ushort j=0; j < matrixColsB; j++)
     {
         // Use Local Memory to cache BTranspose's rows
         // Fill in the portion of BTranspose's row that this work-item is responsible for
         int offset = j*matrixColsARowsB;
-        for(int k=lid; k<matrixColsARowsB; k+=lsize)
+        for(ushort k=lid; k<matrixColsARowsB; k+=lsize)
         {
           if( (k & 3) == 0 ){ // k% 4 == 0
             // printf("gid %d cache matrixBTranspose[%d] to dataCacheB[%d]\n", gid, k+offset, k);
@@ -184,9 +184,9 @@ void MatrixMatrixMulOptimizedTN(const int matrixRowsA,
         barrier( CLK_LOCAL_MEM_FENCE );
 
         int indexA = matrixColsARowsB*gid;
-        int indexBTranspose = 0;
+        ushort indexBTranspose = 0;
         float result = 0.0f;
-        for(int i=0; i < iters; i++)
+        for(ushort i=0; i < iters; i++)
         {
             // Vectorization of loads help utilize the memory bandwidth better
             float4 tmpRow = vload4(0, &matrixA[indexA] );
@@ -197,7 +197,7 @@ void MatrixMatrixMulOptimizedTN(const int matrixRowsA,
         }
 
         // Iterate through the remaining part
-        for( int i = 0 ; i < fmod(matrixColsARowsB, 4.0f) ; i++ ){
+        for( ushort i = 0 ; i < ( matrixColsARowsB & 3) ; i++ ){
             float tmpRow = matrixA[indexA + i];
             float tmpCol = dataCacheB[indexBTranspose + i];
             result += tmpRow * tmpCol;
