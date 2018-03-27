@@ -112,12 +112,12 @@ void MatrixTranspose(const ushort rows,
                               __global float* matrix,
                               __global float* matrixTranspose)
 {
-    int gid = get_global_id(0);
+    ushort gid = get_global_id(0);
     int indexSrc = cols*gid;
-    int iters = cols >> 2;
+    ushort iters = cols >> 2;
     int offset = 0;
 
-    for(int i=0; i < iters; i++)
+    for(ushort i=0; i < iters; i++)
     {
         // Vectorization helps utilize the memory bandwidth better
         float4 tmp1 = vload4(0, &matrix[indexSrc]);
@@ -134,7 +134,7 @@ void MatrixTranspose(const ushort rows,
         indexSrc += 4;
     }
 
-    for( int i = 0 ; i < (cols & 3) ; i++ ){
+    for( ushort i = 0 ; i < (cols & 3) ; i++ ){
         float tmp2 = (*((__global float*)&matrix[indexSrc+i]));
 
         matrixTranspose[gid+offset] = tmp2;
