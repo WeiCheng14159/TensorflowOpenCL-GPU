@@ -390,7 +390,23 @@ namespace tensorflow {
                                   NULL, &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateProgramWithBinary fail with code " << err;
-          return err;
+
+          // Init
+          clKernelBinaryFile = NULL;
+          clKernelBinSize = 0;
+
+          // Read from opencl kernel source file
+          read_file(&clKernelBinaryFile, &clKernelBinSize, "GEMM.c" );
+
+          // Create clprogram with source
+          clProgram = clCreateProgramWithSource(clCtx, 1, (const char **)&clKernelBinaryFile,
+                                &clKernelBinSize, &err);
+          if( err != CL_SUCCESS ){
+            LOG(ERROR) << "clCreateProgramWithSource fail with code " << err;
+            return err;
+          }
+
+          LOG(INFO) << "clCreateProgramWithSource succeed";
         }
 
         // OpenCL build program
