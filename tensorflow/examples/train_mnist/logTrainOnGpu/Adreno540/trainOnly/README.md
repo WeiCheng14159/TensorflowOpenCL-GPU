@@ -18,8 +18,8 @@ to GPU in TensorFlow framework.
 
 | Model Name |  Overall Accuracy (%)  | Training Time (s) | Batch Size |
 | :---       | :---                   | :---              | :---       |
-| MLP        | 79.3232                | 98.7041           | 100        |
-| DNN        | 96.7778                | 512.861           | 1000       |
+| MLP        | 79.3232                | 57.1262           | 100        |
+| DNN        | 96.7778                | 509.021           | 1000       |
 
 ## 4. Instructions:
 
