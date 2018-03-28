@@ -50,7 +50,8 @@ int main(int argc, char* argv[]) {
   int32  input_width      = 28;
   int32  input_height     = 28;
   int32  batchSize        = 50;
-  int32  maxSteps         = 100000;
+  int32  maxSteps         = 1000000;
+  float  iteration        = 1.0f;
   vector<float> dropProb  = { 0.5 } ;
 
   int timeStamp = std::chrono::duration_cast<std::chrono::milliseconds>
@@ -69,6 +70,7 @@ int main(int argc, char* argv[]) {
       Flag("dropoutOpsName",&dropoutOpsName,"Dropout Ops Name"),
       Flag("batchSize",     &batchSize,     "Training & Testing Batch Size"),
       Flag("maxSteps",      &maxSteps,      "Maximum Number of Taining Steps"),
+      Flag("iteration",     &iteration,     "Number of Iteration to Traing the Whole Dataset"),
       Flag("dropProb",      &dropProb[0],   "Drop-out Layer (if any) Probability"),
   };
 
@@ -120,8 +122,8 @@ int main(int argc, char* argv[]) {
 
   runner.tensorInit(batchSize, input_width*input_height);
 
-  for( auto beginIdx = 0 ; beginIdx < mnist.getTrainingDataSize() - batchSize;
-    beginIdx = beginIdx + batchSize/2 )
+  for( auto beginIdx = 0 ; beginIdx < mnist.getTrainingDataSize()*iteration - batchSize;
+    beginIdx = beginIdx + batchSize )
   {
 
     LOG(INFO) << beginIdx << " trained.";
