@@ -92,6 +92,25 @@ cl_half float_to_cl_half(float value){
   return half;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// clSetKernelArg Helper
+#define SET_GEMM_TN_KERNEL_ARG(M, K, N, clMemA, clMemB, clMemC, localSize, localMemType) \
+  CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &M) );                    \
+  CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &K) );                    \
+  CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &N) );                    \
+  CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clMemA) );                  \
+  CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clMemB) );                  \
+  CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clMemC) );                  \
+  CL_CHECK( clSetKernelArg(clGemmKernel, 6, localSize * sizeof(localMemType), NULL) );
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// clSetKernelArg Helper
+#define SET_TRANS_KERNEL_ARG(ROW, COL, clMem, clMem_T)                                   \
+  CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &ROW) );                 \
+  CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &COL) );                 \
+  CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clMem) );                  \
+  CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clMem_T) );                \
+
 using namespace std;
 
 namespace tensorflow {
@@ -184,8 +203,7 @@ namespace tensorflow {
       virtual cl_int memLoad(typename functor::MatMulTypes<T>::out_type out) = 0;
 
       // OpenCL memeory object init
-      virtual cl_int memInit(
-        typename functor::MatMulTypes<T>::in_type in0,
+      virtual cl_int memInit( typename functor::MatMulTypes<T>::in_type in0,
         typename functor::MatMulTypes<T>::in_type in1) = 0;
 
     protected:
@@ -259,32 +277,32 @@ namespace tensorflow {
         size_t perfHint;
         cl_ulong privateMemSize = 0;
 
-        if(
-          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_WORK_GROUP_SIZE,
-            sizeof(size_t), &wgSize, NULL) != CL_SUCCESS                      ||
-          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_COMPILE_WORK_GROUP_SIZE,
-            3 * sizeof(size_t), &compiledWgSize, NULL) != CL_SUCCESS          ||
-          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_LOCAL_MEM_SIZE,
-            sizeof(cl_ulong), &localMemSize, NULL) != CL_SUCCESS              ||
-          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
-            sizeof(size_t), &perfHint, NULL) != CL_SUCCESS                    ||
-          clGetKernelWorkGroupInfo(cl_kernel, cl_device, CL_KERNEL_PRIVATE_MEM_SIZE,
-            sizeof(cl_ulong), &privateMemSize, NULL) != CL_SUCCESS
-          ){
-            printf("debugOpenclKernel fail\n");
-          }else{
-            printf("\
-               CL_KERNEL_WORK_GROUP_SIZE %zu,\n \
-              CL_KERNEL_COMPILE_WORK_GROUP_SIZE [%zu,%zu,%zu],\n \
-              CL_KERNEL_LOCAL_MEM_SIZE %ld,\n \
-              CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE %zu,\n \
-              CL_KERNEL_PRIVATE_MEM_SIZE %ld\n\n",
-              wgSize,
-              compiledWgSize[0], compiledWgSize[1], compiledWgSize[2],
-              localMemSize,
-              perfHint,
-              privateMemSize);
-          }
+        CL_CHECK( clGetKernelWorkGroupInfo(cl_kernel, cl_device,
+                    CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &wgSize, NULL) );
+        CL_CHECK( clGetKernelWorkGroupInfo(cl_kernel, cl_device,
+                    CL_KERNEL_COMPILE_WORK_GROUP_SIZE, 3 * sizeof(size_t),
+                    &compiledWgSize, NULL) );
+        CL_CHECK( clGetKernelWorkGroupInfo(cl_kernel, cl_device,
+                    CL_KERNEL_LOCAL_MEM_SIZE, sizeof(cl_ulong), &localMemSize,
+                    NULL) );
+        CL_CHECK( clGetKernelWorkGroupInfo(cl_kernel, cl_device,
+                    CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, sizeof(size_t),
+                    &perfHint, NULL) );
+        CL_CHECK( clGetKernelWorkGroupInfo(cl_kernel, cl_device,
+                    CL_KERNEL_PRIVATE_MEM_SIZE, sizeof(cl_ulong), &privateMemSize,
+                    NULL) );
+        printf("\
+          CL_KERNEL_WORK_GROUP_SIZE %zu,\n \
+          CL_KERNEL_COMPILE_WORK_GROUP_SIZE [%zu,%zu,%zu],\n \
+          CL_KERNEL_LOCAL_MEM_SIZE %ld,\n \
+          CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE %zu,\n \
+          CL_KERNEL_PRIVATE_MEM_SIZE %ld\n\n",
+          wgSize,
+          compiledWgSize[0], compiledWgSize[1], compiledWgSize[2],
+          localMemSize,
+          perfHint,
+          privateMemSize);
+
       }
   };  // class binaryLoaderInterface
 
@@ -295,33 +313,33 @@ namespace tensorflow {
       cl_int clEnd(){
 
         // Free OpenCL memory objects
-        clReleaseMemObject(clBufferA);
-        clReleaseMemObject(clBufferA_T);
-        clReleaseMemObject(clBufferB);
-        clReleaseMemObject(clBufferB_T);
-        clReleaseMemObject(clBufferC);
+        CL_CHECK( clReleaseMemObject(clBufferA) );
+        CL_CHECK( clReleaseMemObject(clBufferA_T) );
+        CL_CHECK( clReleaseMemObject(clBufferB) );
+        CL_CHECK( clReleaseMemObject(clBufferB_T) );
+        CL_CHECK( clReleaseMemObject(clBufferC) );
 
         // Free OpenCL kernel
-        clReleaseKernel(clGemmKernel);
-        clReleaseKernel(clTransKernel);
+        CL_CHECK( clReleaseKernel(clGemmKernel) );
+        CL_CHECK( clReleaseKernel(clTransKernel) );
 
         // Free OpenCL program
-        clReleaseProgram(clProgram);
+        CL_CHECK( clReleaseProgram(clProgram) );
 
         // Free OpenCL command queue
-        clReleaseCommandQueue(clQueue);
+        CL_CHECK( clReleaseCommandQueue(clQueue) );
 
         // Free OpenCL context
-        clReleaseContext(clCtx);
+        CL_CHECK( clReleaseContext(clCtx) );
 
         // Free OpenCL events
-        clReleaseEvent(transKernelEvent[0]);
-        clReleaseEvent(transKernelEvent[1]);
-        clReleaseEvent(gemmKernelEvent);
-        clReleaseEvent(mapBufferEvents[0]);
-        clReleaseEvent(mapBufferEvents[1]);
-        clReleaseEvent(unMapBufferEvents[0]);
-        clReleaseEvent(unMapBufferEvents[1]);
+        CL_CHECK( clReleaseEvent(transKernelEvent[0]) );
+        CL_CHECK( clReleaseEvent(transKernelEvent[1]) );
+        CL_CHECK( clReleaseEvent(gemmKernelEvent) );
+        CL_CHECK( clReleaseEvent(mapBufferEvents[0]) );
+        CL_CHECK( clReleaseEvent(mapBufferEvents[1]) );
+        CL_CHECK( clReleaseEvent(unMapBufferEvents[0]) );
+        CL_CHECK( clReleaseEvent(unMapBufferEvents[1]) );
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -433,21 +451,14 @@ namespace tensorflow {
         // Handle Matrices Transpose
         if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
-          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+          // Transpose A
+          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) );
+          SET_GEMM_TN_KERNEL_ARG(ColA, RowA, RowB, clBufferA_T, clBufferB,
+            clBufferC, ColA, float);
 
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -457,29 +468,20 @@ namespace tensorflow {
 
         }else if( a_traspose && !b_traspose ){ // Transpose A: yes, Transpose B: no
 
-          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+          // Transpose A
+          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) );
+          // Transpose B
+          SET_TRANS_KERNEL_ARG(RowB, ColB, clBufferB, clBufferB_T);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowB, NULL, 0, NULL, &transKernelEvent[1]) );
 
-          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 6, RowA * sizeof(float), NULL) );
+          SET_GEMM_TN_KERNEL_ARG(ColA, RowA, ColB, clBufferA_T, clBufferB_T,
+            clBufferC, RowA, float);
 
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -489,13 +491,8 @@ namespace tensorflow {
 
         }else if( !a_traspose && b_traspose ){ // Transpose A: no, Transpose B: yes
 
-          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) );
+          SET_GEMM_TN_KERNEL_ARG(RowA, ColA, RowB, clBufferA, clBufferB,
+            clBufferC, ColA, float);
 
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -505,21 +502,14 @@ namespace tensorflow {
 
         }else if( !a_traspose && !b_traspose ){ // Transpose A: no, Transpose B: no
 
-          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) );
+          // Transpose A
+          SET_TRANS_KERNEL_ARG(ColA, ColB, clBufferB, clBufferB_T);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &ColA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) );
+          SET_GEMM_TN_KERNEL_ARG(RowA, ColA, ColB, clBufferA, clBufferB_T,
+            clBufferC, ColA, float);
 
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -673,21 +663,14 @@ namespace tensorflow {
         // Handle Matrices Transpose
         if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
-          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+          // Transpose A
+          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(cl_half), NULL) );
+          SET_GEMM_TN_KERNEL_ARG(ColA, RowA, RowB, clBufferA_T, clBufferB,
+            clBufferC, ColA, cl_half);
 
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -697,29 +680,20 @@ namespace tensorflow {
 
         }else if( a_traspose && !b_traspose ){ // Transpose A: yes, Transpose B: no
 
-          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+          // Transpose A
+          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) );
+          // Transpose B
+          SET_TRANS_KERNEL_ARG(RowB, ColB, clBufferB, clBufferB_T);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowB, NULL, 0, NULL, &transKernelEvent[1]) );
 
-          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 6, RowA * sizeof(cl_half), NULL) );
+          SET_GEMM_TN_KERNEL_ARG(ColA, RowA, ColB, clBufferA_T, clBufferB_T,
+            clBufferC, RowA, cl_half);
 
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -729,13 +703,9 @@ namespace tensorflow {
 
         }else if( !a_traspose && b_traspose ){ // Transpose A: no, Transpose B: yes
 
-          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(cl_half), NULL) );
+          // Transpose A
+          SET_GEMM_TN_KERNEL_ARG(RowA, ColA, RowB, clBufferA, clBufferB,
+            clBufferC, ColA, cl_half);
 
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -745,21 +715,14 @@ namespace tensorflow {
 
         }else if( !a_traspose && !b_traspose ){ // Transpose A: no, Transpose B: no
 
-          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) );
-          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) );
+          // Transpose B
+          SET_TRANS_KERNEL_ARG(ColA, ColB, clBufferB, clBufferB_T);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &ColA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
-          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(cl_half), NULL) );
+          SET_GEMM_TN_KERNEL_ARG(RowA, ColA, ColB, clBufferA, clBufferB_T,
+            clBufferC, ColA, cl_half);
 
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
