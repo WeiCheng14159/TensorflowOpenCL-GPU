@@ -314,9 +314,9 @@ namespace tensorflow {
 
         // Free OpenCL memory objects
         CL_CHECK( clReleaseMemObject(clBufferA) );
-        CL_CHECK( clReleaseMemObject(clBufferA_T) );
+        clReleaseMemObject(clBufferA_T);
         CL_CHECK( clReleaseMemObject(clBufferB) );
-        CL_CHECK( clReleaseMemObject(clBufferB_T) );
+        clReleaseMemObject(clBufferB_T);
         CL_CHECK( clReleaseMemObject(clBufferC) );
 
         // Free OpenCL kernel
@@ -333,8 +333,8 @@ namespace tensorflow {
         CL_CHECK( clReleaseContext(clCtx) );
 
         // Free OpenCL events
-        CL_CHECK( clReleaseEvent(transKernelEvent[0]) );
-        CL_CHECK( clReleaseEvent(transKernelEvent[1]) );
+        clReleaseEvent(transKernelEvent[0]);
+        clReleaseEvent(transKernelEvent[1]);
         CL_CHECK( clReleaseEvent(gemmKernelEvent) );
         CL_CHECK( clReleaseEvent(mapBufferEvents[0]) );
         CL_CHECK( clReleaseEvent(mapBufferEvents[1]) );
