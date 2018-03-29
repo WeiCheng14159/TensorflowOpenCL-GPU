@@ -22,6 +22,25 @@
 // Includes the CLBlast library (C interface)
 #include "clblast_c.h"
 
+// Useful OpenCL checker
+#define CL_CHECK(_expr)                                                        \
+  {                                                                            \
+    cl_int _err = _expr;                                                       \
+    if( _err != CL_SUCCESS) {                                                  \
+      std::cerr << "OpenCL Error: " << #_expr << " returned " << (int)_err;    \
+    }                                                                          \
+  }
+
+#define CL_CHECK_ERR(_expr)                                                    \
+  ({                                                                           \
+    cl_int _err = CL_INVALID_VALUE;                                            \
+    decltype(_expr) _ret = _expr;                                              \
+    if (_err != CL_SUCCESS) {                                                  \
+      std::cerr << "OpenCL Error: " << #_expr << " returned " << (int)_err;    \
+    }                                                                          \
+    _ret;                                                                      \
+  })
+
 using namespace std;
 
 namespace tensorflow {
@@ -47,8 +66,8 @@ namespace tensorflow {
         RowC = out.dimension(0);
         ColC = out.dimension(1);
 
-        int matrixSizeLimit = 0xffff;
-
+        // Matrix size checking
+        int matrixSizeLimit = 0xffff; // Maximum value for cl_ushort
         if( RowA > matrixSizeLimit ||
             ColA > matrixSizeLimit ||
             RowB > matrixSizeLimit ||
@@ -69,36 +88,17 @@ namespace tensorflow {
         a_traspose = ( dim_pair[0].first == 0 ) ? true : false;
         b_traspose = ( dim_pair[0].second == 1 ) ? true : false;
 
-        // OpenCL error code init
-        err = CL_SUCCESS;
-
         // Query platforms
-        err = clGetPlatformIDs(1, &platform, NULL);
-        if( err != CL_SUCCESS ){
-          LOG(INFO) << "clGetPlatformIDs fail with code " << err;
-          return err;
-        }
+        CL_CHECK( clGetPlatformIDs(1, &platform, NULL) );
 
         // Query devices
-        err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &clDevice, NULL);
-        if( err != CL_SUCCESS ){
-          LOG(INFO) << "clGetDeviceIDs fail with code " << err;
-          return err;
-        }
+        CL_CHECK( clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &clDevice, NULL) );
 
         // Create context
-        clCtx = clCreateContext(NULL, 1, &clDevice, NULL, NULL, &err);
-        if( err != CL_SUCCESS ){
-          LOG(INFO) << "clCreateContext fail with code " << err;
-          return err;
-        }
+        clCtx = CL_CHECK_ERR( clCreateContext(NULL, 1, &clDevice, NULL, NULL, &_err) );
 
         // Create command clQueue
-        clQueue = clCreateCommandQueue(clCtx, clDevice, 0, &err);
-        if( err != CL_SUCCESS ){
-          LOG(INFO) << "clCreateCommandQueue fail with code " << err;
-          return err;
-        }
+        clQueue = CL_CHECK_ERR( clCreateCommandQueue(clCtx, clDevice, 0, &_err) );
 
         return CL_SUCCESS;
       }
@@ -161,7 +161,6 @@ namespace tensorflow {
       cl_device_id clDevice;
       cl_context clCtx;
       cl_command_queue clQueue;
-      cl_int err = CL_SUCCESS;
 
   };  // class clMatMulEngine
 
@@ -278,30 +277,17 @@ namespace tensorflow {
 
       cl_int memLoad(typename functor::MatMulTypes<float>::out_type out){
 
-        // Init cl err code
-        err = CL_SUCCESS;
-
         // Use the map function to return clBufferA pointer to the host <= blocking
         clHostPtrC = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferC, CL_TRUE,
-                          CL_MAP_READ, 0, c_size, 0, NULL, NULL, &err);
+                          CL_MAP_READ, 0, c_size, 0, NULL, NULL, NULL);
 
-        // Read results
-        if( err == CL_SUCCESS ){
-          // Read computed result back to host
-          for( auto idx = 0 ; idx < RowC*ColC ; idx++){
-            out.data()[idx] = clHostPtrC[idx];
-          }
-        }else{
-          LOG(ERROR) << "Host-side pointer for matrix C is invalid";
-          return CL_FALSE;
+        // Read computed result back to host
+        for( auto idx = 0 ; idx < RowC*ColC ; idx++){
+          out.data()[idx] = clHostPtrC[idx];
         }
 
         // Release OpenCL resources
-        err = clEnd();
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clEnd() fail with code " << err;
-          return err;
-        }
+        CL_CHECK( clEnd() );
 
         // Return if the results are loaded to memory & OpenCL resources are released
         return CL_SUCCESS;
@@ -311,22 +297,22 @@ namespace tensorflow {
         typename functor::MatMulTypes<float>::in_type in0,
         typename functor::MatMulTypes<float>::in_type in1)
       {
-        // Init cl err code
-        err = CL_SUCCESS;
 
         // Use zero copy to avoid memeory copy
         // Matrix A
         clBufferA = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                          a_size, NULL, NULL);
+                      a_size, NULL, NULL);
         // Use the map function to return clBufferA pointer to the host <= non-blocking
         clHostPtrA = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferA, CL_FALSE,
-                          CL_MAP_WRITE, 0, a_size, 0, NULL, &mapBufferEvents[0], NULL);
+                                      CL_MAP_WRITE, 0, a_size, 0, NULL,
+                                      &mapBufferEvents[0], NULL);
         // Matrix B
         clBufferB = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                           b_size, NULL, NULL);
         // Use the map function to return clBufferA pointer to the host <= non-blocking
         clHostPtrB = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferB, CL_FALSE,
-                          CL_MAP_WRITE, 0, b_size, 0, NULL, &mapBufferEvents[1], NULL);
+                                      CL_MAP_WRITE, 0, b_size, 0, NULL,
+                                      &mapBufferEvents[1], NULL);
 
         // Create GPU buffer for transposed matrices only if needed
         if( a_traspose ){
@@ -337,7 +323,7 @@ namespace tensorflow {
         }
 
         // Wait for completion
-        clWaitForEvents(2, mapBufferEvents);
+        CL_CHECK( clWaitForEvents(2, mapBufferEvents) );
 
         // Host update the buffer using pointer clHostPtrA in host address space
         for( auto idx = 0 ; idx < RowA*ColA ; idx ++){
@@ -349,34 +335,24 @@ namespace tensorflow {
         }
 
         // Unmap the object -> Used in the OpenCL kernel
-        err = clEnqueueUnmapMemObject( clQueue, clBufferA, (void*) clHostPtrA, 0, NULL,
-                                      &unMapBufferEvents[0] );
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clEnqueueUnmapMemObject fail with code " << err;
-          return err;
-        }
+        CL_CHECK( clEnqueueUnmapMemObject( clQueue, clBufferA, (void*) clHostPtrA,
+                    0, NULL, &unMapBufferEvents[0] ) );
 
         // Unmap the object -> Used in the OpenCL kernel
-        err = clEnqueueUnmapMemObject( clQueue, clBufferB, (void*) clHostPtrB, 0, NULL,
-                                      &unMapBufferEvents[1] );
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clEnqueueUnmapMemObject fail with code " << err;
-          return err;
-        }
+        CL_CHECK( clEnqueueUnmapMemObject( clQueue, clBufferB, (void*) clHostPtrB,
+                    0, NULL, &unMapBufferEvents[1] ) );
 
         // Matrix C
         clBufferC = clCreateBuffer(clCtx, CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                          c_size, NULL, NULL);
+                      c_size, NULL, NULL);
 
         // Wait for completion
-        clWaitForEvents(2, unMapBufferEvents);
+        CL_CHECK( clWaitForEvents(2, unMapBufferEvents) );
         return CL_SUCCESS;
       }
 
       cl_int loadFromBinaryCompute()
       {
-        // Init cl err code
-        err = CL_SUCCESS;
 
         unsigned char* clKernelBinaryFile = NULL;
         size_t clKernelBinSize = 0;
@@ -384,207 +360,119 @@ namespace tensorflow {
         read_file(&clKernelBinaryFile, &clKernelBinSize, "matmul.bin" );
 
         // Create an OpenCL program object from binary
-        clProgram =
-          clCreateProgramWithBinary(clCtx, 1, &clDevice, &clKernelBinSize,
-                                  (const unsigned char **)&clKernelBinaryFile,
-                                  NULL, &err);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clCreateProgramWithBinary fail with code " << err;
-          return err;
-        }
+        clProgram = CL_CHECK_ERR( clCreateProgramWithBinary(clCtx, 1, &clDevice,
+                                    &clKernelBinSize,
+                                    (const unsigned char **)&clKernelBinaryFile,
+                                    NULL, &_err) );
 
         // OpenCL build program
-        err = clBuildProgram(clProgram, 1, &clDevice, NULL , NULL, NULL);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clBuildProgram fail with code " << err;
-          return err;
-        }
+        CL_CHECK( clBuildProgram(clProgram, 1, &clDevice, NULL , NULL, NULL) );
 
         // Create OpenCL GEMM kernel obj
-        // clGemmKernel = clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float4" , &err);
-        // clGemmKernel = clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float8" , &err);
-        clGemmKernel = clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float16" , &err);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clCreateKernel fail with code " << err;
-          return err;
-        }
+        // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float4" , &_err) );
+        // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float8" , &_err) );
+        clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float16" , &_err) );
 
         // Create OpenCL Transpose kernel obj
-        // clTransKernel = clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float4" , &err);
-        // clTransKernel = clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float8" , &err);
-        clTransKernel = clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float16" , &err);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clCreateKernel fail with code " << err;
-          return err;
-        }
+        // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float4" , &_err) );
+        // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float8" , &_err) );
+        clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float16" , &_err) );
 
         if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
-          if (
-            clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS
-          ){
-            LOG(ERROR) << "clSetKernelArg fail";
-            return CL_FALSE;
-          }
+          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) );
 
-          err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
-                                       &RowA, NULL, 0, NULL, &transKernelEvent[0]);
-          if( err != CL_SUCCESS ){
-            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-            return err;
-          }
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                      &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          if (
-            clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) != CL_SUCCESS
-          ){
-            LOG(ERROR) << "clSetKernelArg fail";
-            return CL_FALSE;
-          }
+          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) );
 
           const size_t global = ColA;
-          err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
-                                       &global, NULL, 1, transKernelEvent, &gemmKernelEvent);
-          if( err != CL_SUCCESS ){
-            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-            return err;
-          }
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                      &global, NULL, 1, transKernelEvent, &gemmKernelEvent) );
 
-          clWaitForEvents(1, &gemmKernelEvent);
+          CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
 
         }else if( a_traspose && !b_traspose ){ // Transpose A: yes, Transpose B: no
 
-          if (
-            clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS
-          ){
-            LOG(ERROR) << "clSetKernelArg fail";
-            return CL_FALSE;
-          }
+          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) );
 
-          err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
-                                       &RowA, NULL, 0, NULL, &transKernelEvent[0]);
-          if( err != CL_SUCCESS ){
-            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-            return err;
-          }
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                      &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          if (
-            clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowB) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS
-          ){
-            LOG(ERROR) << "clSetKernelArg fail";
-            return CL_FALSE;
-          }
+          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) );
 
-          err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
-                                       &RowB, NULL, 0, NULL, &transKernelEvent[1]);
-          if( err != CL_SUCCESS ){
-            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-            return err;
-          }
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                      &RowB, NULL, 0, NULL, &transKernelEvent[1]) );
 
-          if (
-            clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 6, RowA * sizeof(float), NULL) != CL_SUCCESS
-          ){
-            LOG(ERROR) << "clSetKernelArg fail";
-            return CL_FALSE;
-          }
+          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 6, RowA * sizeof(float), NULL) );
 
           const size_t global = ColA;
-          err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
-                                       &global, NULL, 2, transKernelEvent, &gemmKernelEvent);
-          if( err != CL_SUCCESS ){
-            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-            return err;
-          }
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                      &global, NULL, 2, transKernelEvent, &gemmKernelEvent) );
 
-          clWaitForEvents(1, &gemmKernelEvent);
+          CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
 
         }else if( !a_traspose && b_traspose ){ // Transpose A: no, Transpose B: yes
 
-          if (
-            clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) != CL_SUCCESS
-          ){
-            LOG(ERROR) << "clSetKernelArg fail";
-            return CL_FALSE;
-          }
+          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) );
 
           const size_t global = RowA;
-          err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
-                                       &global, NULL, 0, NULL, &gemmKernelEvent);
-          if( err != CL_SUCCESS ){
-            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-            return err;
-          }
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                      &global, NULL, 0, NULL, &gemmKernelEvent) );
 
-          clWaitForEvents(1, &gemmKernelEvent);
+          CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
 
         }else if( !a_traspose && !b_traspose ){ // Transpose A: no, Transpose B: no
 
-          if (
-            clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) != CL_SUCCESS ||
-            clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS
-          ){
-            LOG(ERROR) << "clSetKernelArg fail";
-            return CL_FALSE;
-          }
+          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) );
 
-          err = clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
-                                       &ColA, NULL, 0, NULL, &transKernelEvent[0]);
-          if( err != CL_SUCCESS ){
-            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-            return err;
-          }
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                      &ColA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          if (
-            clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) != CL_SUCCESS ||
-            clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) != CL_SUCCESS
-          ){
-            LOG(ERROR) << "clSetKernelArg fail";
-            return CL_FALSE;
-          }
+          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(float), NULL) );
 
           const size_t global = RowA;
-          err = clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
-                                       &global, NULL, 1, transKernelEvent, &gemmKernelEvent);
-          if( err != CL_SUCCESS ){
-            LOG(ERROR) << "clEnqueueNDRangeKernel fail with code " << err;
-            return err;
-          }
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                      &global, NULL, 1, transKernelEvent, &gemmKernelEvent) );
 
-          clWaitForEvents(1, &gemmKernelEvent);
+          CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
         }
         return CL_SUCCESS;
       }
@@ -626,20 +514,20 @@ namespace tensorflow {
       cl_int clEnd(){
 
         // Free OpenCL memory objects
-        clReleaseMemObject(clBufferA);
-        clReleaseMemObject(clBufferB);
-        clReleaseMemObject(clBufferC);
+        CL_CHECK( clReleaseMemObject(clBufferA) );
+        CL_CHECK( clReleaseMemObject(clBufferB) );
+        CL_CHECK( clReleaseMemObject(clBufferC) );
 
         // Free OpenCL command queue
-        clReleaseCommandQueue(clQueue);
+        CL_CHECK( clReleaseCommandQueue(clQueue) );
 
         // Free OpenCL context
-        clReleaseContext(clCtx);
+        CL_CHECK( clReleaseContext(clCtx) );
 
         // Free OpenCL events
-        clReleaseEvent(gemmKernelEvent);
-        clReleaseEvent(writeBufferEvents[0]);
-        clReleaseEvent(writeBufferEvents[1]);
+        CL_CHECK( clReleaseEvent(gemmKernelEvent) );
+        CL_CHECK( clReleaseEvent(writeBufferEvents[0]) );
+        CL_CHECK( clReleaseEvent(writeBufferEvents[1]) );
 
         // Return CL_SUCCESS if all resources are released successfully
         return CL_SUCCESS;
@@ -647,22 +535,12 @@ namespace tensorflow {
 
       cl_int memLoad(typename functor::MatMulTypes<float>::out_type out){
 
-        // Init cl err code
-        err = CL_SUCCESS;
-
         // Read results
-        err = clEnqueueReadBuffer(clQueue, clBufferC, CL_TRUE, 0, c_size, out.data(), 0, NULL, NULL);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clEnqueueReadBuffer fail with code " << err;
-          return err;
-        }
+        CL_CHECK( clEnqueueReadBuffer(clQueue, clBufferC, CL_TRUE, 0, c_size,
+                    out.data(), 0, NULL, NULL) );
 
         // Release OpenCL resources
-        err = clEnd();
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clEnd() fail with code " << err;
-          return err;
-        }
+        CL_CHECK( clEnd() );
 
         // Return if the results are loaded to memory & OpenCL resources are released
         return CL_SUCCESS;
@@ -673,25 +551,23 @@ namespace tensorflow {
         typename functor::MatMulTypes<float>::in_type in1)
       {
 
-        // Init cl err code
-        err = CL_SUCCESS;
-
         // Allocate memory buffers
-        clBufferA = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, a_size, NULL, NULL);
-        clBufferB = clCreateBuffer(clCtx, CL_MEM_READ_ONLY, b_size, NULL, NULL);
-        clBufferC = clCreateBuffer(clCtx, CL_MEM_READ_WRITE, c_size, NULL, NULL);
+        clBufferA = CL_CHECK_ERR( clCreateBuffer(clCtx, CL_MEM_READ_ONLY, a_size,
+                                    NULL, &_err) );
+        clBufferB = CL_CHECK_ERR( clCreateBuffer(clCtx, CL_MEM_READ_ONLY, b_size,
+                                    NULL, &_err) );
+        clBufferC = CL_CHECK_ERR( clCreateBuffer(clCtx, CL_MEM_READ_WRITE, c_size,
+                                    NULL, &_err) );
 
         // Enqueue write buffer commands (acynchronous write)
-        err = clEnqueueWriteBuffer(clQueue, clBufferA, CL_FALSE, 0, a_size, in0.data(),
-                                   0, NULL, &writeBufferEvents[0]);
-        if( err != CL_SUCCESS ){ return err; }
+        CL_CHECK( clEnqueueWriteBuffer(clQueue, clBufferA, CL_FALSE, 0, a_size,
+                    in0.data(), 0, NULL, &writeBufferEvents[0]) );
 
-        err = clEnqueueWriteBuffer(clQueue, clBufferB, CL_FALSE, 0, b_size, in1.data(),
-                                   0, NULL, &writeBufferEvents[1]);
-        if( err != CL_SUCCESS ){ return err; }
+        CL_CHECK( clEnqueueWriteBuffer(clQueue, clBufferB, CL_FALSE, 0, b_size,
+                    in1.data(), 0, NULL, &writeBufferEvents[1]) );
 
         // Wait for completion
-        clWaitForEvents(2, writeBufferEvents);
+        CL_CHECK( clWaitForEvents(2, writeBufferEvents) );
         return CL_SUCCESS;
       }
 
@@ -749,7 +625,7 @@ namespace tensorflow {
           return CL_FALSE;
         }
 
-        clWaitForEvents(1, &gemmKernelEvent);
+        CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
         return CL_SUCCESS;
       }
 
@@ -808,36 +684,21 @@ namespace functor {
       // clBLASTEngine c = clBLASTEngine();
       clQualcommFP32Engine c = clQualcommFP32Engine();
 
-      // Init cl status
-      cl_int status = CL_SUCCESS;
-
       // OpenCL host & device side initializaiotn
-      status = c.hostInit(in0, in1, out, dim_pair);
-      if( status != CL_SUCCESS ){
-        LOG(ERROR) << "CL init fail with code " << status;
-      }
+      CL_CHECK( c.hostInit(in0, in1, out, dim_pair) );
 
       // debug info
       // c.debug(true);
 
       // OpenCL memeory obj init & memory copy
-      status = c.memInit(in0, in1);
-      if( status != CL_SUCCESS ){
-        LOG(ERROR) << "CL mem init fail with code " << status;
-      }
+      CL_CHECK( c.memInit(in0, in1) );
 
       // GEMM computation
-      status = c.loadFromBinaryCompute();
-      // status = c.clBlastCompute();
-      if( status != CL_SUCCESS ){
-        LOG(ERROR) << "CL compute fail with code " << status;
-      }
+      CL_CHECK( c.loadFromBinaryCompute() );
+      // CL_CHECK( c.clBlastCompute() );
 
       // OpenCL memory load
-      status = c.memLoad(out);
-      if( status != CL_SUCCESS ){
-        LOG(ERROR) << "CL memeory load fail with code " << status;
-      }
+      CL_CHECK( c.memLoad(out) );
 
       // Results
       // c.printMatrix(in0, in1, out);
