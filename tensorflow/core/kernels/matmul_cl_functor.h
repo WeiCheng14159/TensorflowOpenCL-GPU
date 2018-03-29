@@ -33,7 +33,8 @@
   {                                                                            \
     cl_int _err = _expr;                                                       \
     if( _err != CL_SUCCESS) {                                                  \
-      std::cerr << "OpenCL Error: " << #_expr << " returned " << (int)_err;    \
+      std::cerr << "OpenCL Error: " << #_expr << " returned " << (int)_err     \
+      << std::endl;                                                            \
     }                                                                          \
   }
 // OpenCL return type checker
@@ -42,7 +43,8 @@
     cl_int _err = CL_INVALID_VALUE;                                            \
     decltype(_expr) _ret = _expr;                                              \
     if (_err != CL_SUCCESS) {                                                  \
-      std::cerr << "OpenCL Error: " << #_expr << " returned " << (int)_err;    \
+      std::cerr << "OpenCL Error: " << #_expr << " returned " << (int)_err     \
+      << std::endl;                                                            \
     }                                                                          \
     _ret;                                                                      \
   })
