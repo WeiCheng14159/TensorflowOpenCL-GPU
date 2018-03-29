@@ -653,7 +653,7 @@ void MatMul_TN_1D_Fp32_Float16(
             // Vectorization of loads help utilize the memory bandwidth better
             float16 float16RowVec = vload16(0, &matrixA[indexA] );
             float16 float16ColVec = vload16(0, &dataCacheB[indexBTranspose] );
-            result += dot16(float8RowVec, float8ColVec);
+            result += dot16(float16RowVec, float16ColVec);
             indexBTranspose += 16;
             indexA += 16;
         }
@@ -858,7 +858,7 @@ void MatMul_TN_1D_Fp16_Half16(
           // Vectorization of loads help utilize the memory bandwidth better
           float16 float16RowVec = vload_half16(0, &matrixA[indexA] );
           float16 float16ColVec = vload_half16(0, &dataCacheB[indexBTranspose] );
-          result += dot16(tmpRow, tmpCol);
+          result += dot16(float16RowVec, float16ColVec);
           indexBTranspose += 16;
           indexA += 16;
       }
