@@ -1,7 +1,7 @@
 // clMatMulEngine<float>
 //     |
 //     v
-// clQualcommEngine <---- binaryLoaderInterface
+// clQualcommFP32Engine <---- binaryLoaderInterface
 //
 // clMatMulEngine<float>
 //     |
@@ -237,8 +237,8 @@ namespace tensorflow {
       }
   };  // class binaryLoaderInterface
 
-  // clQualcommEngine concrete class using Qualcomm GEMM example
-  class clQualcommEngine : public binaryLoaderInterface, public clMatMulEngine<float>{
+  // clQualcommFP32Engine concrete class using Qualcomm GEMM example
+  class clQualcommFP32Engine : public binaryLoaderInterface, public clMatMulEngine<float>{
     public:
 
       cl_int clEnd(){
@@ -401,14 +401,18 @@ namespace tensorflow {
         }
 
         // Create OpenCL GEMM kernel obj
-        clGemmKernel = clCreateKernel(clProgram, "MatrixMatrixMulOptimizedTN" , &err);
+        // clGemmKernel = clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float4" , &err);
+        // clGemmKernel = clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float8" , &err);
+        clGemmKernel = clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float16" , &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateKernel fail with code " << err;
           return err;
         }
 
         // Create OpenCL Transpose kernel obj
-        clTransKernel = clCreateKernel(clProgram, "MatrixTranspose" , &err);
+        // clTransKernel = clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float4" , &err);
+        // clTransKernel = clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float8" , &err);
+        clTransKernel = clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float16" , &err);
         if( err != CL_SUCCESS ){
           LOG(ERROR) << "clCreateKernel fail with code " << err;
           return err;
@@ -612,7 +616,8 @@ namespace tensorflow {
       cl_kernel clGemmKernel;
       cl_kernel clTransKernel;
 
-  };  // class clQualcommEngine
+  };  // class clQualcommFP32Engine
+
 
   // clBLASTEngine concrete class using CLBLAST API
   class clBLASTEngine : public clMatMulEngine<float>{
@@ -748,7 +753,7 @@ namespace tensorflow {
         return CL_SUCCESS;
       }
 
-    private:
+    protected:
 
       // OpenCL memeory object
       cl_mem clBufferA;
@@ -801,7 +806,7 @@ namespace functor {
       {
 
       // clBLASTEngine c = clBLASTEngine();
-      clQualcommEngine c = clQualcommEngine();
+      clQualcommFP32Engine c = clQualcommFP32Engine();
 
       // Init cl status
       cl_int status = CL_SUCCESS;
