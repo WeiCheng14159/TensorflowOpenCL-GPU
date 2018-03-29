@@ -146,13 +146,24 @@ int main(int argc, char* argv[]) {
     cout << "Checking results ...\n";
 
     double accu_err = 0;
+    double signErrCount = 0;
+    double valueErrCount = 0;
     for( auto row = 0 ; row < rowC ; row ++ )
     {
       for( auto col = 0 ; col < colC ; col ++ ){
-        accu_err += abs( tf_res(row, col) - eigen_res(row, col) );
+        float tmp = abs( tf_res(row, col) - eigen_res(row, col) );
+        accu_err += tmp;
+        if(  tf_res(row, col) * eigen_res(row, col) < 0 ){
+          // cout << "(" << row << "," << col << ") sign err, tf_res " << tf_res(row, col) << " eigen_res " << eigen_res(row, col) << endl;
+          signErrCount++;
+        }
+        else if( tmp > 1 ){
+          // cout << "(" << row << "," << col << ") val err, tf_res " << tf_res(row, col) << " eigen_res " << eigen_res(row, col) << endl;
+          valueErrCount++;
+        }
       }
     }
-    cout << "err per unit: " << accu_err/(rowC*colC) << endl;
+    cout << "err per unit: " << accu_err/(rowC*colC) << ", signErr(%) " << signErrCount/(rowC*colC) << ", valueErr(%) " << valueErrCount/(rowC*colC) << endl;
 
     return 0;
 }
