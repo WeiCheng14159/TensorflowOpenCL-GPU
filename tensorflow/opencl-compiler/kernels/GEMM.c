@@ -651,8 +651,8 @@ void MatMul_TN_1D_Fp32_Float16(
         for(ushort i=0; i < iters; i++)
         {
             // Vectorization of loads help utilize the memory bandwidth better
-            float16 float8RowVec = vload16(0, &matrixA[indexA] );
-            float16 float8ColVec = vload16(0, &dataCacheB[indexBTranspose] );
+            float16 float16RowVec = vload16(0, &matrixA[indexA] );
+            float16 float16ColVec = vload16(0, &dataCacheB[indexBTranspose] );
             result += dot16(float8RowVec, float8ColVec);
             indexBTranspose += 16;
             indexA += 16;
@@ -722,9 +722,9 @@ void MatMul_TN_1D_Fp16_Half4(
       for(ushort i=0; i < iters; i++)
       {
           // Vectorization of loads help utilize the memory bandwidth better
-          float4 tmpRow = vload_half4(0, &matrixA[indexA] );
-          float4 tmpCol = vload_half4(0, &dataCacheB[indexBTranspose] );
-          result += dot(tmpRow, tmpCol);
+          float4 float4RowVec = vload_half4(0, &matrixA[indexA] );
+          float4 float4ColVec = vload_half4(0, &dataCacheB[indexBTranspose] );
+          result += dot(float4RowVec, float4ColVec);
           indexBTranspose += 4;
           indexA += 4;
       }
@@ -789,9 +789,9 @@ void MatMul_TN_1D_Fp16_Half8(
       for(ushort i=0; i < iters; i++)
       {
           // Vectorization of loads help utilize the memory bandwidth better
-          float8 tmpRow = vload_half8(0, &matrixA[indexA] );
-          float8 tmpCol = vload_half8(0, &dataCacheB[indexBTranspose] );
-          result += dot8(tmpRow, tmpCol);
+          float8 float8RowVec = vload_half8(0, &matrixA[indexA] );
+          float8 float8ColVec = vload_half8(0, &dataCacheB[indexBTranspose] );
+          result += dot8(float8RowVec, float8ColVec);
           indexBTranspose += 8;
           indexA += 8;
       }
@@ -856,8 +856,8 @@ void MatMul_TN_1D_Fp16_Half16(
       for(ushort i=0; i < iters; i++)
       {
           // Vectorization of loads help utilize the memory bandwidth better
-          float16 tmpRow = vload_half16(0, &matrixA[indexA] );
-          float16 tmpCol = vload_half16(0, &dataCacheB[indexBTranspose] );
+          float16 float16RowVec = vload_half16(0, &matrixA[indexA] );
+          float16 float16ColVec = vload_half16(0, &dataCacheB[indexBTranspose] );
           result += dot16(tmpRow, tmpCol);
           indexBTranspose += 16;
           indexA += 16;
