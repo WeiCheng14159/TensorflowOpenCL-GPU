@@ -57,6 +57,7 @@ int main(int argc, char* argv[]) {
     // Tensorflow Tensor initializaiotn
     Tensor TensorA (DT_FLOAT, TensorShape({ rowA, colA }));
     Tensor TensorB (DT_FLOAT, TensorShape({ rowB, colB }));
+    float * TensorC = (float*)malloc( rowC * colC * sizeof(float) );
 
     // Matrix initializaiotn
     auto TensorAMatrix = TensorA.tensor<float, 2>();
@@ -116,7 +117,7 @@ int main(int argc, char* argv[]) {
       Eigen::Dynamic,  /* num_rows is a run-time value */
       Eigen::Dynamic,  /* num_cols is a run-time value */
       Eigen::RowMajor  /* tensorflow::Tensor is always row-major */>>(
-        TensorA.flat<float>().data(),  /* ptr to data */
+        TensorC,  /* ptr to data */
         rowC,           /* num_rows */
         colC            /* num_cols */);
 
@@ -165,5 +166,7 @@ int main(int argc, char* argv[]) {
     }
     cout << "err per unit: " << accu_err/(rowC*colC) << ", signErr(%) " << signErrCount/(rowC*colC) << ", valueErr(%) " << valueErrCount/(rowC*colC) << endl;
 
+    free(TensorC);
+    
     return 0;
 }
