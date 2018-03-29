@@ -406,37 +406,10 @@ namespace tensorflow {
         read_file(&clKernelBinaryFile, &clKernelBinSize, "matmul.bin" );
 
         // Create an OpenCL program object from binary
-<<<<<<< HEAD
-        clProgram =
-          clCreateProgramWithBinary(clCtx, 1, &clDevice, &clKernelBinSize,
-                                  (const unsigned char **)&clKernelBinaryFile,
-                                  NULL, &err);
-        if( err != CL_SUCCESS ){
-          LOG(ERROR) << "clCreateProgramWithBinary fail with code " << err;
-
-          // Init
-          clKernelBinaryFile = NULL;
-          clKernelBinSize = 0;
-
-          // Read from opencl kernel source file
-          read_file(&clKernelBinaryFile, &clKernelBinSize, "GEMM.c" );
-
-          // Create clprogram with source
-          clProgram = clCreateProgramWithSource(clCtx, 1, (const char **)&clKernelBinaryFile,
-                                &clKernelBinSize, &err);
-          if( err != CL_SUCCESS ){
-            LOG(ERROR) << "clCreateProgramWithSource fail with code " << err;
-            return err;
-          }
-
-          LOG(INFO) << "clCreateProgramWithSource succeed";
-        }
-=======
         clProgram = CL_CHECK_ERR( clCreateProgramWithBinary(clCtx, 1, &clDevice,
                                     &clKernelBinSize,
                                     (const unsigned char **)&clKernelBinaryFile,
                                     NULL, &_err) );
->>>>>>> feat-mix-precision-training
 
         // OpenCL build program
         CL_CHECK( clBuildProgram(clProgram, 1, &clDevice, NULL , NULL, NULL) );
