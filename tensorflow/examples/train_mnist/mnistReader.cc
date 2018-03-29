@@ -13,12 +13,13 @@ mnistReader::mnistReader(string path){
 }
 
 // Training Batch
+// Notice that if beginIdx > `trainDataSize`, beginIdx' = (beginIdx % trainDataSize)
 void mnistReader::getTrainingBatch(int beginIdx, int batchSize,
   vector<float>* batchImgVec, vector<float>* batchLabelVec)
 {
     // Boundary checking
     if( beginIdx + batchSize > trainDataSize){
-      throw std::invalid_argument( "Index out of bound " );
+      beginIdx = beginIdx % trainDataSize;
     }
 
     for( auto idx = beginIdx; idx < beginIdx + batchSize; idx++ )
