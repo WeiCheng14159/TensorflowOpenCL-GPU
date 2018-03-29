@@ -41,6 +41,52 @@
     _ret;                                                                      \
   })
 
+// float => cl_half
+#ifndef INFINITY
+#define INFINITY 1.0/0.0
+#endif
+
+#ifndef NAN
+#define NAN 0.0/0.0
+#endif
+
+typedef union
+{
+  int32_t i;
+  float f;
+} FloatConvUnion;
+
+// float to cl_half conversions
+cl_half float_to_cl_half(float value)
+{
+  FloatConvUnion u;
+  u.f = value;
+  cl_half half = (u.i >> 16) & 0x8000; // sign
+  cl_half fraction = (u.i >> 12) & 0x007ff; // fraction with extra bit for rounding
+  cl_half exponent = (u.i >> 23)  & 0xff; // exponent
+
+  if(exponent < 0x0067) // Return signed zero if zero or value is too small for denormal half
+    return half;
+
+  if(exponent > 0x008e){// value was NaN or Inf
+    half |= 0x7c00u; // Make into inf
+    half |= exponent == 255 && (u.i & 0x007fffffu); // If value was NaN make this into NaN
+    return half;
+  }
+
+  if(exponent < 0x0071){// Denormal
+    fraction |= 0x0800u;
+
+    // rounding
+    half |= (fraction >> (0x0072 - exponent)) + ((fraction >> (0x0071 - exponent)) & 1);
+    return half;
+  }
+
+  half |= ((exponent - 0x0070) << 10) | (fraction >> 1);
+  half += fraction & 1;// rounding
+  return half;
+}
+
 using namespace std;
 
 namespace tensorflow {
