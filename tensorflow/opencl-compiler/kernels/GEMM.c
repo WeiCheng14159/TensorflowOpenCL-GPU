@@ -301,7 +301,6 @@ void MatTrans_1D_Fp32_Float16(
 // for Matrix B which in turn helps take advantage of data locality
 //--------------------------------------------------------------------------------------
 __kernel
-__attribute__((reqd_work_group_size(16, 0, 0)))
 void MatTrans_1D_Fp16_Half4(
                                 const ushort rows,
                                 const ushort cols,
@@ -346,7 +345,6 @@ void MatTrans_1D_Fp16_Half4(
 // for Matrix B which in turn helps take advantage of data locality
 //--------------------------------------------------------------------------------------
 __kernel
-__attribute__((reqd_work_group_size(16, 0, 0)))
 void MatTrans_1D_Fp16_Half8(
                                 const ushort rows,
                                 const ushort cols,
@@ -400,7 +398,6 @@ void MatTrans_1D_Fp16_Half8(
 // for Matrix B which in turn helps take advantage of data locality
 //--------------------------------------------------------------------------------------
 __kernel
-__attribute__((reqd_work_group_size(16, 0, 0)))
 void MatTrans_1D_Fp16_Half16(
                                 const ushort rows,
                                 const ushort cols,
@@ -752,7 +749,7 @@ void MatMul_TN_1D_Fp16_Half4(
 // loads are used to utilize the memory bandwidth better.
 //--------------------------------------------------------------------------------------
 __kernel
-__attribute__((reqd_work_group_size(16, 0, 0)))
+__attribute__((reqd_work_group_size(8, 0, 0)))
 void MatMul_TN_1D_Fp16_Half8(
                               const ushort matrixRowsA,
                               const ushort matrixColsARowsB,
