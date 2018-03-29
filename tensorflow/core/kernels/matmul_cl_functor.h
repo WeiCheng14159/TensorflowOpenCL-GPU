@@ -523,7 +523,7 @@ namespace tensorflow {
         return CL_SUCCESS;
       }
 
-    private:
+    protected:
 
       // OpenCL memeory object
       cl_mem clBufferA;
@@ -552,6 +552,222 @@ namespace tensorflow {
 
   };  // class clQualcommFP32Engine
 
+  // clQualcommFP16Engine concrete class using Qualcomm GEMM example
+  class clQualcommFP16Engine : public clQualcommFP32Engine{
+    public:
+
+      cl_int memLoad(typename functor::MatMulTypes<float>::out_type out){
+
+        // Use the map function to return clBufferA pointer to the host <= blocking
+        clHostPtrC = ( cl_float * ) clEnqueueMapBuffer(clQueue, clBufferC, CL_TRUE,
+                                      CL_MAP_READ, 0, c_size, 0, NULL, NULL, NULL);
+
+        // Read computed result back to host
+        for( auto idx = 0 ; idx < RowC*ColC ; idx++){
+          out.data()[idx] = clHostPtrC[idx];
+        }
+
+        // Release OpenCL resources
+        CL_CHECK( clEnd() );
+
+        // Return if the results are loaded to memory & OpenCL resources are released
+        return CL_SUCCESS;
+      }
+
+      cl_int memInit(
+        typename functor::MatMulTypes<float>::in_type in0,
+        typename functor::MatMulTypes<float>::in_type in1)
+      {
+
+        // FP16 is half of the size of FP32
+        a_size = a_size >> 1;
+        b_size = b_size >> 1;
+
+        // Use zero copy to avoid memeory copy
+        // Matrix A
+        clBufferA = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                      a_size, NULL, NULL);
+        // Use the map function to return clBufferA pointer to the host <= non-blocking
+        clHostFp16PtrA = ( cl_half * ) clEnqueueMapBuffer(clQueue, clBufferA, CL_FALSE,
+                                        CL_MAP_WRITE, 0, a_size, 0, NULL,
+                                        &mapBufferEvents[0], NULL);
+        // Matrix B
+        clBufferB = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                      b_size, NULL, NULL);
+        // Use the map function to return clBufferA pointer to the host <= non-blocking
+        clHostFp16PtrB = ( cl_half * ) clEnqueueMapBuffer(clQueue, clBufferB, CL_FALSE,
+                                        CL_MAP_WRITE, 0, b_size, 0, NULL,
+                                        &mapBufferEvents[1], NULL);
+
+        // Create GPU buffer for transposed matrices only if needed
+        if( a_traspose ){
+          clBufferA_T = clCreateBuffer(clCtx, CL_MEM_HOST_NO_ACCESS, a_size, NULL, NULL);
+        }
+        if( !b_traspose ){
+          clBufferB_T = clCreateBuffer(clCtx, CL_MEM_HOST_NO_ACCESS, b_size, NULL, NULL);
+        }
+
+        // Wait for completion
+        CL_CHECK( clWaitForEvents(2, mapBufferEvents) );
+
+        // Host update the buffer using pointer clHostFp16PtrA in host address space
+        for( auto idx = 0 ; idx < RowA*ColA ; idx ++){
+          clHostFp16PtrA[ idx ] = float_to_cl_half( in0.data()[idx] );
+        }
+        // Host update the buffer using pointer clHostFp16PtrB in host address space
+        for( auto idx = 0 ; idx < RowB*ColB ; idx ++){
+          clHostFp16PtrB[ idx ] = float_to_cl_half( in1.data()[idx] );
+        }
+
+        // Unmap the object -> Used in the OpenCL kernel
+        CL_CHECK( clEnqueueUnmapMemObject( clQueue, clBufferA, (void*) clHostFp16PtrA,
+                    0, NULL, &unMapBufferEvents[0] ) );
+
+        // Unmap the object -> Used in the OpenCL kernel
+        CL_CHECK( clEnqueueUnmapMemObject( clQueue, clBufferB, (void*) clHostFp16PtrB,
+                    0, NULL, &unMapBufferEvents[1] ) );
+
+        // Matrix C
+        clBufferC = clCreateBuffer(clCtx, CL_MEM_HOST_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                      c_size, NULL, NULL);
+
+        // Wait for completion
+        CL_CHECK( clWaitForEvents(2, unMapBufferEvents) );
+        return CL_SUCCESS;
+      }
+
+      cl_int loadFromBinaryCompute()
+      {
+
+        unsigned char* clKernelBinaryFile = NULL;
+        size_t clKernelBinSize = 0;
+        // Read compiled OpenCL kernel binary file from disk
+        read_file(&clKernelBinaryFile, &clKernelBinSize, "matmul.bin" );
+
+        // Create an OpenCL program object from binary
+        clProgram = CL_CHECK_ERR( clCreateProgramWithBinary(clCtx, 1, &clDevice,
+                                    &clKernelBinSize,
+                                    (const unsigned char **)&clKernelBinaryFile,
+                                    NULL, &_err) );
+
+        // OpenCL build program
+        CL_CHECK( clBuildProgram(clProgram, 1, &clDevice, NULL , NULL, NULL) );
+
+        // Create OpenCL GEMM kernel obj
+        // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half4" , &_err) );
+        clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half8" , &_err) );
+        // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half16" , &_err) );
+
+        // Create OpenCL Transpose kernel obj
+        // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half4" , &_err) );
+        clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half8" , &_err) );
+        // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half16" , &_err) );
+
+        if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
+
+          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                      &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
+
+          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(cl_half), NULL) );
+
+          const size_t global = ColA;
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                      &global, NULL, 1, transKernelEvent, &gemmKernelEvent) );
+
+          CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
+
+        }else if( a_traspose && !b_traspose ){ // Transpose A: yes, Transpose B: no
+
+          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                      &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
+
+          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) );
+
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                      &RowB, NULL, 0, NULL, &transKernelEvent[1]) );
+
+          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA_T) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 6, RowA * sizeof(cl_half), NULL) );
+
+          const size_t global = ColA;
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                      &global, NULL, 2, transKernelEvent, &gemmKernelEvent) );
+
+          CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
+
+        }else if( !a_traspose && b_traspose ){ // Transpose A: no, Transpose B: yes
+
+          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &RowB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(cl_half), NULL) );
+
+          const size_t global = RowA;
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                      &global, NULL, 0, NULL, &gemmKernelEvent) );
+
+          CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
+
+        }else if( !a_traspose && !b_traspose ){ // Transpose A: no, Transpose B: no
+
+          CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &ColB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clBufferB) );
+          CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clBufferB_T) );
+
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
+                      &ColA, NULL, 0, NULL, &transKernelEvent[0]) );
+
+          CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &RowA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &ColA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &ColB) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clBufferA) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clBufferB_T) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clBufferC) );
+          CL_CHECK( clSetKernelArg(clGemmKernel, 6, ColA * sizeof(cl_half), NULL) );
+
+          const size_t global = RowA;
+          CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
+                      &global, NULL, 1, transKernelEvent, &gemmKernelEvent) );
+
+          CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
+        }
+        return CL_SUCCESS;
+      }
+
+    private:
+      // Copied memory data
+      cl_half * clHostFp16PtrA;
+      cl_half * clHostFp16PtrB;
+
+  };  // class clQualcommFP16Engine
 
   // clBLASTEngine concrete class using CLBLAST API
   class clBLASTEngine : public clMatMulEngine<float>{
@@ -729,6 +945,7 @@ namespace functor {
 
       // clBLASTEngine c = clBLASTEngine();
       clQualcommFP32Engine c = clQualcommFP32Engine();
+      // clQualcommFP16Engine c = clQualcommFP16Engine();
 
       // OpenCL host & device side initializaiotn
       CL_CHECK( c.hostInit(in0, in1, out, dim_pair) );
