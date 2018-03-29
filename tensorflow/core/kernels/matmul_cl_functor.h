@@ -27,7 +27,8 @@
 // Includes the CLBlast library (C interface)
 #include "clblast_c.h"
 
-// Useful OpenCL checker
+////////////////////////////////////////////////////////////////////////////////
+// OpenCL status checker
 #define CL_CHECK(_expr)                                                        \
   {                                                                            \
     cl_int _err = _expr;                                                       \
@@ -35,7 +36,7 @@
       std::cerr << "OpenCL Error: " << #_expr << " returned " << (int)_err;    \
     }                                                                          \
   }
-
+// OpenCL return type checker
 #define CL_CHECK_ERR(_expr)                                                    \
   ({                                                                           \
     cl_int _err = CL_INVALID_VALUE;                                            \
@@ -46,24 +47,23 @@
     _ret;                                                                      \
   })
 
-// float => cl_half
+////////////////////////////////////////////////////////////////////////////////
+// float to cl_half conversions
 #ifndef INFINITY
-#define INFINITY 1.0/0.0
+  #define INFINITY 1.0/0.0
 #endif
 
 #ifndef NAN
-#define NAN 0.0/0.0
+  #define NAN 0.0/0.0
 #endif
 
-typedef union
-{
+typedef union {
   int32_t i;
   float f;
 } FloatConvUnion;
 
-// float to cl_half conversions
-cl_half float_to_cl_half(float value)
-{
+cl_half float_to_cl_half(float value){
+
   FloatConvUnion u;
   u.f = value;
   cl_half half = (u.i >> 16) & 0x8000; // sign
@@ -249,6 +249,7 @@ namespace tensorflow {
         return 0;
       }
 
+      // Show clKernel object info
       void debugOpenclKernel(cl_kernel cl_kernel, cl_device_id cl_device){
 
         // Kernel info
@@ -349,7 +350,7 @@ namespace tensorflow {
         typename functor::MatMulTypes<float>::in_type in1)
       {
 
-        // Use zero copy to avoid memeory copy
+        // Use zero copy to avoid additional memeory copy
         // Matrix A
         clBufferA = clCreateBuffer(clCtx, CL_MEM_HOST_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                       a_size, NULL, NULL);
@@ -419,16 +420,17 @@ namespace tensorflow {
         // OpenCL build program
         CL_CHECK( clBuildProgram(clProgram, 1, &clDevice, NULL , NULL, NULL) );
 
-        // Create OpenCL GEMM kernel obj
+        // Create OpenCL GEMM kernel object
         // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float4" , &_err) );
         // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float8" , &_err) );
         clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float16" , &_err) );
 
-        // Create OpenCL Transpose kernel obj
+        // Create OpenCL Transpose kernel object
         // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float4" , &_err) );
         // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float8" , &_err) );
         clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float16" , &_err) );
 
+        // Handle Matrices Transpose
         if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
           CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
@@ -537,7 +539,7 @@ namespace tensorflow {
       cl_mem clBufferB_T;
       cl_mem clBufferC;
 
-      // Copied memory data
+      // Host memory data
       cl_float * clHostPtrA;
       cl_float * clHostPtrB;
       cl_float * clHostPtrC;
@@ -658,16 +660,17 @@ namespace tensorflow {
         // OpenCL build program
         CL_CHECK( clBuildProgram(clProgram, 1, &clDevice, NULL , NULL, NULL) );
 
-        // Create OpenCL GEMM kernel obj
+        // Create OpenCL GEMM kernel object
         // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half4" , &_err) );
         clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half8" , &_err) );
         // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half16" , &_err) );
 
-        // Create OpenCL Transpose kernel obj
+        // Create OpenCL Transpose kernel object
         // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half4" , &_err) );
         clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half8" , &_err) );
         // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half16" , &_err) );
 
+        // Handle Matrices Transpose
         if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
           CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &RowA) );
@@ -948,9 +951,9 @@ namespace functor {
         const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair)
       {
 
-      // clBLASTEngine c = clBLASTEngine();
       clQualcommFP32Engine c = clQualcommFP32Engine();
       // clQualcommFP16Engine c = clQualcommFP16Engine();
+      // clBLASTEngine c = clBLASTEngine();
 
       // OpenCL host & device side initializaiotn
       CL_CHECK( c.hostInit(in0, in1, out, dim_pair) );
@@ -958,7 +961,7 @@ namespace functor {
       // debug info
       // c.debug(true);
 
-      // OpenCL memeory obj init & memory copy
+      // OpenCL memeory object init & memory copy
       CL_CHECK( c.memInit(in0, in1) );
 
       // GEMM computation
