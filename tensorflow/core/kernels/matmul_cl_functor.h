@@ -2,7 +2,12 @@
 //     |
 //     v
 // clQualcommFP32Engine <---- binaryLoaderInterface
-//
+
+// clMatMulEngine<float>
+//     |
+//     v
+// clQualcommFP16Engine <---- binaryLoaderInterface
+
 // clMatMulEngine<float>
 //     |
 //     v
