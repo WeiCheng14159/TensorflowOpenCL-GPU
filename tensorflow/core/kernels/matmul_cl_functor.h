@@ -438,7 +438,7 @@ namespace tensorflow {
                                     NULL, &_err) );
 
         // OpenCL build program
-        CL_CHECK( clBuildProgram(clProgram, 1, &clDevice, NULL , NULL, NULL) );
+        CL_CHECK( clBuildProgram(clProgram, 1, &clDevice, "-cl-fast-relaxed-math" , NULL, NULL) );
 
         // Create OpenCL GEMM kernel object
         // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp32_Float4" , &_err) );
