@@ -523,8 +523,8 @@ namespace tensorflow {
           transKernelIter = ColB >> 4;
           gemmKernelIter = ColA >> 4;
 
-          // Transpose A
-          SET_TRANS_KERNEL_ARG(ColA, ColB, clBufferB, clBufferB_T, transKernelIter );
+          // Transpose B
+          SET_TRANS_KERNEL_ARG(RowB, ColB, clBufferB, clBufferB_T, transKernelIter );
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &ColA, NULL, 0, NULL, &transKernelEvent[0]) );
