@@ -497,7 +497,7 @@ void MatMul_TN_1D_Fp32_Float4(
     {
         // Use Local Memory to cache BTranspose's rows
         // Fill in the portion of BTranspose's row that this work-item is responsible for
-        int offset = j*matrixColsARowsB;
+        int offset = mul24(j, matrixColsARowsB);
         for(ushort k=lid; k<matrixColsARowsB; k+=lsize)
         {
           if( (k & 3) == 0 ){ // k% 4 == 0
@@ -508,7 +508,7 @@ void MatMul_TN_1D_Fp32_Float4(
         // Insert a barrier so all work-items in the workgroup wait until dataCacheB is filled
         barrier( CLK_LOCAL_MEM_FENCE );
 
-        int indexA = matrixColsARowsB*gid;
+        int indexA = mul24(matrixColsARowsB, gid);
         ushort indexBTranspose = 0;
         float result = 0.0f;
         for(ushort i=0; i < iters; i++)
@@ -564,7 +564,7 @@ void MatMul_TN_1D_Fp32_Float8(
     {
         // Use Local Memory to cache BTranspose's rows
         // Fill in the portion of BTranspose's row that this work-item is responsible for
-        int offset = j*matrixColsARowsB;
+        int offset = mul24(j, matrixColsARowsB);
         for(ushort k=lid; k<matrixColsARowsB; k+=lsize)
         {
           if( (k & 7) == 0 ){ // k% 8 == 0
@@ -575,7 +575,7 @@ void MatMul_TN_1D_Fp32_Float8(
         // Insert a barrier so all work-items in the workgroup wait until dataCacheB is filled
         barrier( CLK_LOCAL_MEM_FENCE );
 
-        int indexA = matrixColsARowsB*gid;
+        int indexA = mul24(matrixColsARowsB, gid);
         ushort indexBTranspose = 0;
         float result = 0.0f;
         for(ushort i=0; i < iters; i++)
@@ -631,7 +631,7 @@ void MatMul_TN_1D_Fp32_Float16(
     {
         // Use Local Memory to cache BTranspose's rows
         // Fill in the portion of BTranspose's row that this work-item is responsible for
-        int offset = j*matrixColsARowsB;
+        int offset = mul24(j, matrixColsARowsB);
         for(ushort k=lid; k<matrixColsARowsB; k+=lsize)
         {
           if( (k & 15) == 0 ){ // k % 16 == 0
@@ -642,7 +642,7 @@ void MatMul_TN_1D_Fp32_Float16(
         // Insert a barrier so all work-items in the workgroup wait until dataCacheB is filled
         barrier( CLK_LOCAL_MEM_FENCE );
 
-        int indexA = matrixColsARowsB*gid;
+        int indexA = mul24(matrixColsARowsB, gid);
         ushort indexBTranspose = 0;
         float result = 0.0f;
         for(ushort i=0; i < iters; i++)
@@ -702,7 +702,7 @@ void MatMul_TN_1D_Fp16_Half4(
   {
       // Use Local Memory to cache BTranspose's rows
       // Fill in the portion of BTranspose's row that this work-item is responsible for
-      int offset = j*matrixColsARowsB;
+      int offset = mul24(j, matrixColsARowsB);
       for(ushort k=lid; k<matrixColsARowsB; k+=lsize)
       {
         if( (k & 3) == 0 ){ // k% 4 == 0
@@ -713,7 +713,7 @@ void MatMul_TN_1D_Fp16_Half4(
       // Insert a barrier so all work-items in the workgroup wait until dataCacheB is filled
       barrier( CLK_LOCAL_MEM_FENCE );
 
-      int indexA = matrixColsARowsB*gid;
+      int indexA = mul24(matrixColsARowsB, gid);
       ushort indexBTranspose = 0;
       float result = 0.0f;
       for(ushort i=0; i < iters; i++)
@@ -769,7 +769,7 @@ void MatMul_TN_1D_Fp16_Half8(
   {
       // Use Local Memory to cache BTranspose's rows
       // Fill in the portion of BTranspose's row that this work-item is responsible for
-      int offset = j*matrixColsARowsB;
+      int offset = mul24(j, matrixColsARowsB);
       for(ushort k=lid; k<matrixColsARowsB; k+=lsize)
       {
         if( (k & 7) == 0 ){ // k % 8 == 0
@@ -780,7 +780,7 @@ void MatMul_TN_1D_Fp16_Half8(
       // Insert a barrier so all work-items in the workgroup wait until dataCacheB is filled
       barrier( CLK_LOCAL_MEM_FENCE );
 
-      int indexA = matrixColsARowsB*gid;
+      int indexA = mul24(matrixColsARowsB, gid);
       ushort indexBTranspose = 0;
       float result = 0.0f;
       for(ushort i=0; i < iters; i++)
@@ -836,7 +836,7 @@ void MatMul_TN_1D_Fp16_Half16(
   {
       // Use Local Memory to cache BTranspose's rows
       // Fill in the portion of BTranspose's row that this work-item is responsible for
-      int offset = j*matrixColsARowsB;
+      int offset = mul24(j, matrixColsARowsB);
       for(ushort k=lid; k<matrixColsARowsB; k+=lsize)
       {
         if( (k & 15) == 0 ){ // k % 16 == 0
@@ -847,7 +847,7 @@ void MatMul_TN_1D_Fp16_Half16(
       // Insert a barrier so all work-items in the workgroup wait until dataCacheB is filled
       barrier( CLK_LOCAL_MEM_FENCE );
 
-      int indexA = matrixColsARowsB*gid;
+      int indexA = mul24(matrixColsARowsB, gid);
       ushort indexBTranspose = 0;
       float result = 0.0f;
       for(ushort i=0; i < iters; i++)
