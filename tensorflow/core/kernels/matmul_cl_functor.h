@@ -96,22 +96,25 @@ cl_half float_to_cl_half(float value){
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // clSetKernelArg Helper
-#define SET_GEMM_TN_KERNEL_ARG(M, K, N, clMemA, clMemB, clMemC, localSize, localMemType) \
+#define SET_GEMM_TN_KERNEL_ARG(M, K, N, clMemA, clMemB, clMemC, localSize, localMemType, \
+  iter)                                                                                  \
   CL_CHECK( clSetKernelArg(clGemmKernel, 0, sizeof(cl_ushort), &M) );                    \
   CL_CHECK( clSetKernelArg(clGemmKernel, 1, sizeof(cl_ushort), &K) );                    \
   CL_CHECK( clSetKernelArg(clGemmKernel, 2, sizeof(cl_ushort), &N) );                    \
   CL_CHECK( clSetKernelArg(clGemmKernel, 3, sizeof(cl_mem), &clMemA) );                  \
   CL_CHECK( clSetKernelArg(clGemmKernel, 4, sizeof(cl_mem), &clMemB) );                  \
   CL_CHECK( clSetKernelArg(clGemmKernel, 5, sizeof(cl_mem), &clMemC) );                  \
-  CL_CHECK( clSetKernelArg(clGemmKernel, 6, localSize * sizeof(localMemType), NULL) );
+  CL_CHECK( clSetKernelArg(clGemmKernel, 6, localSize * sizeof(localMemType), NULL) );   \
+  CL_CHECK( clSetKernelArg(clGemmKernel, 7, sizeof(cl_ushort), &iter) );                 \
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // clSetKernelArg Helper
-#define SET_TRANS_KERNEL_ARG(ROW, COL, clMem, clMem_T)                                   \
+#define SET_TRANS_KERNEL_ARG(ROW, COL, clMem, clMem_T, iter)                             \
   CL_CHECK( clSetKernelArg(clTransKernel, 0, sizeof(cl_ushort), &ROW) );                 \
   CL_CHECK( clSetKernelArg(clTransKernel, 1, sizeof(cl_ushort), &COL) );                 \
   CL_CHECK( clSetKernelArg(clTransKernel, 2, sizeof(cl_mem), &clMem) );                  \
   CL_CHECK( clSetKernelArg(clTransKernel, 3, sizeof(cl_mem), &clMem_T) );                \
+  CL_CHECK( clSetKernelArg(clTransKernel, 4, sizeof(cl_ushort), &iter) );                \
 
 using namespace std;
 
@@ -450,17 +453,23 @@ namespace tensorflow {
         // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float8" , &_err) );
         clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp32_Float16" , &_err) );
 
+        cl_ushort gemmKernelIter;
+        cl_ushort transKernelIter;
+
         // Handle Matrices Transpose
         if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
+          transKernelIter = ColA >> 4;
+          gemmKernelIter = RowA >> 4;
+
           // Transpose A
-          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T);
+          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T, transKernelIter );
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
           SET_GEMM_TN_KERNEL_ARG(ColA, RowA, RowB, clBufferA_T, clBufferB,
-            clBufferC, ColA, float);
+            clBufferC, ColA, float, gemmKernelIter );
 
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -470,20 +479,25 @@ namespace tensorflow {
 
         }else if( a_traspose && !b_traspose ){ // Transpose A: yes, Transpose B: no
 
+          transKernelIter = ColA >> 4;
+          gemmKernelIter = RowA >> 4;
+
           // Transpose A
-          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T);
+          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T, transKernelIter );
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
+          transKernelIter = ColB >> 4;
+
           // Transpose B
-          SET_TRANS_KERNEL_ARG(RowB, ColB, clBufferB, clBufferB_T);
+          SET_TRANS_KERNEL_ARG(RowB, ColB, clBufferB, clBufferB_T, transKernelIter );
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowB, NULL, 0, NULL, &transKernelEvent[1]) );
 
           SET_GEMM_TN_KERNEL_ARG(ColA, RowA, ColB, clBufferA_T, clBufferB_T,
-            clBufferC, RowA, float);
+            clBufferC, RowA, float, gemmKernelIter );
 
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -493,8 +507,10 @@ namespace tensorflow {
 
         }else if( !a_traspose && b_traspose ){ // Transpose A: no, Transpose B: yes
 
+          gemmKernelIter = ColA >> 4;
+
           SET_GEMM_TN_KERNEL_ARG(RowA, ColA, RowB, clBufferA, clBufferB,
-            clBufferC, ColA, float);
+            clBufferC, ColA, float, gemmKernelIter );
 
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -504,14 +520,17 @@ namespace tensorflow {
 
         }else if( !a_traspose && !b_traspose ){ // Transpose A: no, Transpose B: no
 
+          transKernelIter = ColB >> 4;
+          gemmKernelIter = ColA >> 4;
+
           // Transpose A
-          SET_TRANS_KERNEL_ARG(ColA, ColB, clBufferB, clBufferB_T);
+          SET_TRANS_KERNEL_ARG(ColA, ColB, clBufferB, clBufferB_T, transKernelIter );
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &ColA, NULL, 0, NULL, &transKernelEvent[0]) );
 
           SET_GEMM_TN_KERNEL_ARG(RowA, ColA, ColB, clBufferA, clBufferB_T,
-            clBufferC, ColA, float);
+            clBufferC, ColA, float, gemmKernelIter);
 
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -652,6 +671,9 @@ namespace tensorflow {
         // OpenCL build program
         CL_CHECK( clBuildProgram(clProgram, 1, &clDevice, NULL , NULL, NULL) );
 
+        cl_ushort gemmKernelIter;
+        cl_ushort transKernelIter;
+
         // Create OpenCL GEMM kernel object
         // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half4" , &_err) );
         clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half8" , &_err) );
@@ -665,14 +687,17 @@ namespace tensorflow {
         // Handle Matrices Transpose
         if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
+          transKernelIter = ColA >> 3;
+          gemmKernelIter = RowA >> 3;
+
           // Transpose A
-          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T);
+          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T, transKernelIter);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
           SET_GEMM_TN_KERNEL_ARG(ColA, RowA, RowB, clBufferA_T, clBufferB,
-            clBufferC, ColA, cl_half);
+            clBufferC, ColA, cl_half, gemmKernelIter);
 
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -682,20 +707,25 @@ namespace tensorflow {
 
         }else if( a_traspose && !b_traspose ){ // Transpose A: yes, Transpose B: no
 
+          transKernelIter = ColA >> 3;
+          gemmKernelIter = RowA >> 3;
+
           // Transpose A
-          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T);
+          SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T, transKernelIter);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
+          transKernelIter = ColB >> 3;
+
           // Transpose B
-          SET_TRANS_KERNEL_ARG(RowB, ColB, clBufferB, clBufferB_T);
+          SET_TRANS_KERNEL_ARG(RowB, ColB, clBufferB, clBufferB_T, transKernelIter);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowB, NULL, 0, NULL, &transKernelEvent[1]) );
 
           SET_GEMM_TN_KERNEL_ARG(ColA, RowA, ColB, clBufferA_T, clBufferB_T,
-            clBufferC, RowA, cl_half);
+            clBufferC, RowA, cl_half, gemmKernelIter);
 
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -705,9 +735,11 @@ namespace tensorflow {
 
         }else if( !a_traspose && b_traspose ){ // Transpose A: no, Transpose B: yes
 
+          gemmKernelIter = ColA >> 3;
+
           // Transpose A
           SET_GEMM_TN_KERNEL_ARG(RowA, ColA, RowB, clBufferA, clBufferB,
-            clBufferC, ColA, cl_half);
+            clBufferC, ColA, cl_half, gemmKernelIter);
 
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -717,14 +749,17 @@ namespace tensorflow {
 
         }else if( !a_traspose && !b_traspose ){ // Transpose A: no, Transpose B: no
 
+          transKernelIter = ColB >> 3;
+          gemmKernelIter = ColA >> 3;
+
           // Transpose B
-          SET_TRANS_KERNEL_ARG(ColA, ColB, clBufferB, clBufferB_T);
+          SET_TRANS_KERNEL_ARG(ColA, ColB, clBufferB, clBufferB_T, transKernelIter);
 
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &ColA, NULL, 0, NULL, &transKernelEvent[0]) );
 
           SET_GEMM_TN_KERNEL_ARG(RowA, ColA, ColB, clBufferA, clBufferB_T,
-            clBufferC, ColA, cl_half);
+            clBufferC, ColA, cl_half, gemmKernelIter);
 
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,

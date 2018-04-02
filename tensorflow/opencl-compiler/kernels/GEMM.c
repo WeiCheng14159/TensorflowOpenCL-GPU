@@ -129,11 +129,11 @@ void MatTrans_1D_Fp32_Float4(
                                 const ushort rows,
                                 const ushort cols,
                                 __global float* matrix,
-                                __global float* matrixTranspose)
+                                __global float* matrixTranspose,
+                                const ushort iters)
 {
     ushort gid = get_global_id(0);
     int indexSrc = mul24(cols, gid);
-    ushort iters = cols >> 2;
     int offset = 0;
 
     for(ushort i=0; i < iters; i++)
@@ -174,11 +174,11 @@ void MatTrans_1D_Fp32_Float8(
                                 const ushort rows,
                                 const ushort cols,
                                 __global float* matrix,
-                                __global float* matrixTranspose)
+                                __global float* matrixTranspose,
+                                const ushort iters)
 {
     ushort gid = get_global_id(0);
     int indexSrc = mul24(cols, gid);
-    ushort iters = cols >> 3;
     int offset = 0;
 
     for(ushort i=0; i < iters; i++)
@@ -227,11 +227,11 @@ void MatTrans_1D_Fp32_Float16(
                                 const ushort rows,
                                 const ushort cols,
                                 __global float* matrix,
-                                __global float* matrixTranspose)
+                                __global float* matrixTranspose,
+                                const ushort iters)
 {
     ushort gid = get_global_id(0);
     int indexSrc = mul24(cols, gid);
-    ushort iters = cols >> 4;
     int offset = 0;
 
     for(ushort i=0; i < iters; i++)
@@ -305,11 +305,11 @@ void MatTrans_1D_Fp16_Half4(
                                 const ushort rows,
                                 const ushort cols,
                                 __global half* matrix,
-                                __global half* matrixTranspose)
+                                __global half* matrixTranspose,
+                                const ushort iters)
 {
     ushort gid = get_global_id(0);
     int indexSrc = mul24(cols, gid);
-    ushort iters = cols >> 2;
     int offset = 0;
 
     for(ushort i=0; i < iters; i++)
@@ -349,11 +349,11 @@ void MatTrans_1D_Fp16_Half8(
                                 const ushort rows,
                                 const ushort cols,
                                 __global half* matrix,
-                                __global half* matrixTranspose)
+                                __global half* matrixTranspose,
+                                const ushort iters)
 {
     ushort gid = get_global_id(0);
     int indexSrc = mul24(cols, gid);
-    ushort iters = cols >> 3;
     int offset = 0;
 
     for(ushort i=0; i < iters; i++)
@@ -402,11 +402,11 @@ void MatTrans_1D_Fp16_Half16(
                                 const ushort rows,
                                 const ushort cols,
                                 __global half* matrix,
-                                __global half* matrixTranspose)
+                                __global half* matrixTranspose,
+                                const ushort iters)
 {
     ushort gid = get_global_id(0);
     int indexSrc = mul24(cols, gid);
-    ushort iters = cols >> 4;
     int offset = 0;
 
     for(ushort i=0; i < iters; i++)
@@ -485,13 +485,13 @@ void MatMul_TN_1D_Fp32_Float4(
                                 __global float* matrixA,
                                 __global float* matrixBTranspose,
                                 __global float* matrixProduct,
-                                __local float* dataCacheB)
+                                __local float* dataCacheB,
+                                const ushort iters)
 {
     ushort gid = get_global_id(0);
     ushort lid = get_local_id(0);
     ushort lsize = get_local_size(0);
     int resultIndex = mul24(gid, matrixColsB);
-    ushort iters = matrixColsARowsB >> 2;
 
     for(ushort j=0; j < matrixColsB; j++)
     {
@@ -552,13 +552,13 @@ void MatMul_TN_1D_Fp32_Float8(
                                 __global float* matrixA,
                                 __global float* matrixBTranspose,
                                 __global float* matrixProduct,
-                                __local float* dataCacheB)
+                                __local float* dataCacheB,
+                                const ushort iters)
 {
     ushort gid = get_global_id(0);
     ushort lid = get_local_id(0);
     ushort lsize = get_local_size(0);
     int resultIndex = mul24(gid, matrixColsB);
-    ushort iters = matrixColsARowsB >> 3;
 
     for(ushort j=0; j < matrixColsB; j++)
     {
@@ -619,13 +619,13 @@ void MatMul_TN_1D_Fp32_Float16(
                                 __global float* matrixA,
                                 __global float* matrixBTranspose,
                                 __global float* matrixProduct,
-                                __local float* dataCacheB)
+                                __local float* dataCacheB,
+                                const ushort iters)
 {
     ushort gid = get_global_id(0);
     ushort lid = get_local_id(0);
     ushort lsize = get_local_size(0);
     int resultIndex = mul24(gid, matrixColsB);
-    ushort iters = matrixColsARowsB >> 4;
 
     for(ushort j=0; j < matrixColsB; j++)
     {
@@ -690,13 +690,13 @@ void MatMul_TN_1D_Fp16_Half4(
                               __global half* matrixA,
                               __global half* matrixBTranspose,
                               __global float* matrixProduct,
-                              __local  half* dataCacheB)
+                              __local  half* dataCacheB,
+                              const ushort iters)
 {
   ushort gid = get_global_id(0);
   ushort lid = get_local_id(0);
   ushort lsize = get_local_size(0);
   int resultIndex = mul24(gid, matrixColsB);
-  ushort iters = matrixColsARowsB >> 2;
 
   for(ushort j=0; j < matrixColsB; j++)
   {
@@ -757,13 +757,13 @@ void MatMul_TN_1D_Fp16_Half8(
                               __global half* matrixA,
                               __global half* matrixBTranspose,
                               __global float* matrixProduct,
-                              __local  half* dataCacheB)
+                              __local  half* dataCacheB,
+                              const ushort iters)
 {
   ushort gid = get_global_id(0);
   ushort lid = get_local_id(0);
   ushort lsize = get_local_size(0);
   int resultIndex = mul24(gid, matrixColsB);
-  ushort iters = matrixColsARowsB >> 3;
 
   for(ushort j=0; j < matrixColsB; j++)
   {
@@ -824,13 +824,13 @@ void MatMul_TN_1D_Fp16_Half16(
                               __global half* matrixA,
                               __global half* matrixBTranspose,
                               __global float* matrixProduct,
-                              __local  half* dataCacheB)
+                              __local  half* dataCacheB,
+                              const ushort iters)
 {
   ushort gid = get_global_id(0);
   ushort lid = get_local_id(0);
   ushort lsize = get_local_size(0);
   int resultIndex = mul24(gid, matrixColsB);
-  ushort iters = matrixColsARowsB >> 4;
 
   for(ushort j=0; j < matrixColsB; j++)
   {
