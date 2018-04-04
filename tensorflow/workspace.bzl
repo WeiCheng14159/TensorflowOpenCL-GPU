@@ -834,10 +834,10 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
   native.new_http_archive(
       name = "libopencl_archive",
       urls = [
-           "https://github.com/supernovaremnant/Android-OpenCL-Driver/archive/9a226387642bad0205b42926a7a231760081d92b.tar.gz",
+           "https://github.com/supernovaremnant/Android-OpenCL-Driver/archive/40ce4fa730a5369b1ecf171abd066c3453d27819.tar.gz",
       ],
-      sha256 = "fcbdce257235e2b0ec13ed70990b78c087dec57fd99992fb1d13fcae6f22eba1",
-      strip_prefix = "Android-OpenCL-Driver-9a226387642bad0205b42926a7a231760081d92b",
+      sha256 = "14485b3139bfd9ecbaffe3eb7d9f98904be50e2e046eff7d984b28512378514d",
+      strip_prefix = "Android-OpenCL-Driver-40ce4fa730a5369b1ecf171abd066c3453d27819",
       build_file = str(Label("//third_party:libopencl.BUILD")),
   )
 
@@ -845,6 +845,8 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       name = "android_opencl_libs",
       # For Adreno 540 GPU
       actual = "@libopencl_archive//:Qualcomm_Adreno_540_android_opencl_64_bit_lib",
+      # For Adreno 530 GPU
+      # actual = "@libopencl_archive//:Qualcomm_Adreno_530_android_opencl_64_bit_lib",
       # For Mali T880 GPU
       # actual = "@libopencl_archive//:ARM_Mali_T880_android_opencl_64_bit_lib",
   )

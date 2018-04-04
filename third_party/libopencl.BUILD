@@ -24,6 +24,20 @@ filegroup(
 )
 
 filegroup(
+    name = "qualcomm_adreno_530_32_bit_lib",
+    srcs = [
+        "Qualcomm-Adreno-530/libOpenCL_32.so",
+    ],
+)
+
+filegroup(
+    name = "qualcomm_adreno_530_64_bit_lib",
+    srcs = [
+        "Qualcomm-Adreno-530/libOpenCL_64.so",
+    ],
+)
+
+filegroup(
     name = "arm_mali_t880_64_bit_lib",
     srcs = [
         "ARM-Mali-T880/libOpenCLIcd.so",
@@ -38,6 +52,18 @@ cc_library(
     ]),
     srcs = [
         ":qualcomm_adreno_540_64_bit_lib",
+    ],
+    linkstatic = 1,
+)
+
+cc_library(
+    name = "Qualcomm_Adreno_530_android_opencl_64_bit_lib",
+    hdrs = glob([
+        "CL/**",
+        "*.hpp",
+    ]),
+    srcs = [
+        ":qualcomm_adreno_530_64_bit_lib",
     ],
     linkstatic = 1,
 )
