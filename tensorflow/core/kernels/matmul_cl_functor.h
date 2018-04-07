@@ -16,6 +16,8 @@
 #ifndef MATMUL_CL_FUNCTOR_H_
 #define MATMUL_CL_FUNCTOR_H_
 
+#include <fstream>
+
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/tensor_types.h"
@@ -235,6 +237,34 @@ namespace tensorflow {
       cl_device_id clDevice;
       cl_context clCtx;
       cl_command_queue clQueue;
+
+      // Timer
+      std::chrono::high_resolution_clock::time_point timer;
+
+      void startTimer(){
+        timer = std::chrono::high_resolution_clock::now();
+      }
+
+      double read_us(){
+        auto elapsed_time = std::chrono::high_resolution_clock::now() - timer;
+        return std::chrono::duration<double, std::micro>(elapsed_time).count();
+      }
+
+      // Performance calculator
+      void getPerformance(){
+
+        std::ofstream ofs ("performance.log", std::ios_base::app);
+
+        double delta_t = read_us() * 1e6; // delta_t in second
+
+        double bandwidth = (a_size+b_size+c_size)/delta_t;
+        ofs << bandwidth << ",";
+
+        double flops = (RowA*ColA*RowB*ColB*RowC*ColC)/delta_t;
+        ofs << flops << "\n";
+
+        ofs.close();
+      }
 
   };  // class clMatMulEngine
 
@@ -471,6 +501,8 @@ namespace tensorflow {
           SET_GEMM_TN_KERNEL_ARG(ColA, RowA, RowB, clBufferA_T, clBufferB,
             clBufferC, ColA, float, gemmKernelIter );
 
+          startTimer();
+
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
                       &global, NULL, 1, transKernelEvent, &gemmKernelEvent) );
@@ -499,6 +531,8 @@ namespace tensorflow {
           SET_GEMM_TN_KERNEL_ARG(ColA, RowA, ColB, clBufferA_T, clBufferB_T,
             clBufferC, RowA, float, gemmKernelIter );
 
+          startTimer();
+
           const size_t global = ColA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
                       &global, NULL, 2, transKernelEvent, &gemmKernelEvent) );
@@ -511,6 +545,8 @@ namespace tensorflow {
 
           SET_GEMM_TN_KERNEL_ARG(RowA, ColA, RowB, clBufferA, clBufferB,
             clBufferC, ColA, float, gemmKernelIter );
+
+          startTimer();
 
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
@@ -532,12 +568,16 @@ namespace tensorflow {
           SET_GEMM_TN_KERNEL_ARG(RowA, ColA, ColB, clBufferA, clBufferB_T,
             clBufferC, ColA, float, gemmKernelIter);
 
+          startTimer();
+
           const size_t global = RowA;
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clGemmKernel, 1, NULL,
                       &global, NULL, 1, transKernelEvent, &gemmKernelEvent) );
 
           CL_CHECK( clWaitForEvents(1, &gemmKernelEvent) );
         }
+
+        getPerformance();
         return CL_SUCCESS;
       }
 
