@@ -255,13 +255,13 @@ namespace tensorflow {
 
         std::ofstream ofs ("performance.log", std::ios_base::app);
 
-        double delta_t = read_us() * 1e6; // delta_t in second
+        double delta_t = read_us() * 1e-6; // delta_t in second
 
         double bandwidth = (a_size+b_size+c_size)/delta_t;
-        ofs << bandwidth << ",";
+        ofs << bandwidth << " B/s,";
 
         double flops = (RowA*ColA*RowB*ColB*RowC*ColC)/delta_t;
-        ofs << flops << "\n";
+        ofs << flops << " FLOPS\n";
 
         ofs.close();
       }
