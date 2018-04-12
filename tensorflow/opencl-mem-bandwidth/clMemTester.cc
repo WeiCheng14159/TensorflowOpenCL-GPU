@@ -106,7 +106,7 @@ cl_int clMemTester::DeviceToHost( unsigned long int numBytes )
   // err code init
   err = CL_SUCCESS;
 
-  // Create device buffer
+  // Copy the contents of the host buffer into a device buffer
   cl_mem deviceBuffer = clCreateBuffer( clCtx,
     CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, numBytes, hostBufPtr, &err );
   if ( err != CL_SUCCESS )
@@ -157,7 +157,7 @@ cl_int clMemTester::DeviceToDevice( unsigned long int numBytes )
   // err code init
   err = CL_SUCCESS;
 
-  // Create a src device buffer
+  // Copy the contents of the host buffer into a device buffer
   cl_mem deviceBufferSrc = clCreateBuffer( clCtx,
     CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, numBytes, hostBufPtr, &err );
   if ( err != CL_SUCCESS )
@@ -168,7 +168,7 @@ cl_int clMemTester::DeviceToDevice( unsigned long int numBytes )
       return err;
   }
 
-  // Create a dest device buffer
+  // Create another device buffer to copy into
   cl_mem deviceBufferDst = clCreateBuffer( clCtx, CL_MEM_READ_WRITE, numBytes,
     NULL, &err );
   if ( err != CL_SUCCESS )
