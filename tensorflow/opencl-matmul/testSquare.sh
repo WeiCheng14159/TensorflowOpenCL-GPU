@@ -2,8 +2,9 @@
 # Time testing bash running on Android
 END=50
 START=4
+INTERVAL=4
 numTimes=1
-for i in $(seq $START $END)
+for i in $(seq $START $INTERVAL $END)
 do
 
   # TransposeA: No, TransposeB: No,
