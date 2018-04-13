@@ -829,6 +829,23 @@ def tf_workspace(path_prefix="", tf_repo_name=""):
       actual = "@libmnist_reader//:lib",
   )
 
+  # Added by Cheng Wei, the CIFAR10 C++ reader library
+  # (https://github.com/wichtounet/cifar-10)
+  native.new_http_archive(
+        name = "libcifar10_reader",
+        urls = [
+             "https://github.com/wichtounet/cifar-10/archive/ad30996c9b853e9805166beb0f929fc747ab3148.tar.gz",
+        ],
+        sha256 = "62f739c9b8977b8477db2c5a5ac99bcbfe97b57b06f064d1653602e7a28b8598",
+        strip_prefix = "cifar-10-ad30996c9b853e9805166beb0f929fc747ab3148/include",
+        build_file = str(Label("//third_party:libcifar10_reader.BUILD")),
+  )
+
+  native.bind(
+      name = "libcifar10",
+      actual = "@libcifar10_reader//:lib",
+  )
+
 # Added by Cheng Wei, this is OpenCL driver Android (Qualcomm Adreno 540 GPU & ARM Mali T880 GPU)
 
   native.new_http_archive(
