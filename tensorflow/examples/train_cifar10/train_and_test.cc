@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
     runner.sessionTrain(session, inputOpsName, outputOpsName, dropoutOpsName);
 
     // Do overall testing for each 1000 data trained
-    if( beginIdx % (5*batchSize) == 0 )
+    if( beginIdx % (10*batchSize) == 0 )
     {
       vector<double> avg_accu;
 
