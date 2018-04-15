@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
   float  iteration        = 1.0f;
   vector<float> dropProb  = { 0.5 } ;
 
-  int timeStamp = std::chrono::duration_cast<std::chrono::milliseconds>
+  unsigned long int timeStamp = std::chrono::duration_cast<std::chrono::milliseconds>
   ( std::chrono::system_clock::now().time_since_epoch() ).count();
   string logFileName      = root_dir + "events.out.tfevents." + to_string(timeStamp)
      + ".wei.local";
