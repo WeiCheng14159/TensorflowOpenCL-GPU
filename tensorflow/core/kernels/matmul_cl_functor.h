@@ -716,19 +716,19 @@ namespace tensorflow {
 
         // Create OpenCL GEMM kernel object
         // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half4" , &_err) );
-        clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half8" , &_err) );
-        // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half16" , &_err) );
+        // clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half8" , &_err) );
+        clGemmKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatMul_TN_1D_Fp16_Half16" , &_err) );
 
         // Create OpenCL Transpose kernel object
         // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half4" , &_err) );
-        clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half8" , &_err) );
-        // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half16" , &_err) );
+        // clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half8" , &_err) );
+        clTransKernel = CL_CHECK_ERR( clCreateKernel(clProgram, "MatTrans_1D_Fp16_Half16" , &_err) );
 
         // Handle Matrices Transpose
         if( a_traspose && b_traspose ){ // Transpose A: yes, Transpose B: yes
 
-          transKernelIter = ColA >> 3;
-          gemmKernelIter = RowA >> 3;
+          transKernelIter = ColA >> 4;
+          gemmKernelIter = RowA >> 4;
 
           // Transpose A
           SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T, transKernelIter);
@@ -747,8 +747,8 @@ namespace tensorflow {
 
         }else if( a_traspose && !b_traspose ){ // Transpose A: yes, Transpose B: no
 
-          transKernelIter = ColA >> 3;
-          gemmKernelIter = RowA >> 3;
+          transKernelIter = ColA >> 4;
+          gemmKernelIter = RowA >> 4;
 
           // Transpose A
           SET_TRANS_KERNEL_ARG(RowA, ColA, clBufferA, clBufferA_T, transKernelIter);
@@ -756,7 +756,7 @@ namespace tensorflow {
           CL_CHECK( clEnqueueNDRangeKernel(clQueue, clTransKernel, 1, NULL,
                       &RowA, NULL, 0, NULL, &transKernelEvent[0]) );
 
-          transKernelIter = ColB >> 3;
+          transKernelIter = ColB >> 4;
 
           // Transpose B
           SET_TRANS_KERNEL_ARG(RowB, ColB, clBufferB, clBufferB_T, transKernelIter);
@@ -775,7 +775,7 @@ namespace tensorflow {
 
         }else if( !a_traspose && b_traspose ){ // Transpose A: no, Transpose B: yes
 
-          gemmKernelIter = ColA >> 3;
+          gemmKernelIter = ColA >> 4;
 
           // Transpose A
           SET_GEMM_TN_KERNEL_ARG(RowA, ColA, RowB, clBufferA, clBufferB,
@@ -789,8 +789,8 @@ namespace tensorflow {
 
         }else if( !a_traspose && !b_traspose ){ // Transpose A: no, Transpose B: no
 
-          transKernelIter = ColB >> 3;
-          gemmKernelIter = ColA >> 3;
+          transKernelIter = ColB >> 4;
+          gemmKernelIter = ColA >> 4;
 
           // Transpose B
           SET_TRANS_KERNEL_ARG(ColA, ColB, clBufferB, clBufferB_T, transKernelIter);
