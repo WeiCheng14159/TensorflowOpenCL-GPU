@@ -34,7 +34,7 @@ Compile project by running script `./train_mnist_android.sh`
 For GPU results, run the following commands on Android
 
 ### 1) MLP
-`./train_and_test_mnist --graphName=mnist_mlp.pb --batchSize=100 --iteration=1`
+`./train_and_test_mnist --graphName=mnist_mlp.pb --batchSize=100 --iteration=3`
 #### * batchSize=100 for better accuracy
 ### 2) DNN
-`./train_and_test_mnist --graphName=mnist_dnn.pb --batchSize=1000 --dropProb=0.8 --iteration=1`
+`./train_and_test_mnist --graphName=mnist_dnn.pb --batchSize=1000 --dropProb=0.8 --iteration=3`
