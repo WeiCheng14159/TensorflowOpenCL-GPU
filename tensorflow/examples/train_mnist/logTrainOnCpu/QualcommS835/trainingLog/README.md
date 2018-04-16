@@ -7,16 +7,16 @@ Train a batch of data and test the model with testing dataset.
 
 | Model Name |  Overall Accuracy (%)  |
 | :---       | :---                   |
-| MLP        | 78.87                  |
-| DNN        | 91.94                  |
+| MLP        | 86.10                  |
+| DNN        | 92.43                  |
 
 ### MLP training accuracy:
 
-![MLP training results](/tensorflow/examples/train_mnist/logTrainOnCpu/QualcommS835/trainingLog/mlp/Screen_Shot_2018-03-29_at_3.53.23_AM.png)
+![MLP training results](/tensorflow/examples/train_mnist/logTrainOnCpu/QualcommS835/trainingLog/mlp/Screen_Shot_2018-04-16_at_8.43.24_PM.png)
 
 ### DNN training accuracy:
 
-![DNN training results](/tensorflow/examples/train_mnist/logTrainOnCpu/QualcommS835/trainingLog/dnn/Screen_Shot_2018-03-29_at_4.01.23_AM.png)
+![DNN training results](/tensorflow/examples/train_mnist/logTrainOnCpu/QualcommS835/trainingLog/dnn/Screen_Shot_2018-04-16_at_9.06.20_PM.png)
 
 ### MLP model structure:
 
