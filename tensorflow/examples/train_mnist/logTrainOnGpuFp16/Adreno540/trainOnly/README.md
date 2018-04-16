@@ -39,6 +39,14 @@ to GPU in TensorFlow framework.
 | MLP        | 78.8788                | 53.1919           | 100        |
 | DNN        | 96.6364                | 388.855           | 1000       |
 
+## 3.2 Train MNIST dataset on mobile GPU (FP16)
+
+### OpenCL Kernel Used: `MatMul_TN_1D_Fp16_Float16` + `MatTrans_1D_Fp16_Float16`
+| Model Name |  Overall Accuracy (%)  | Training Time (s) | Batch Size |
+| :---       | :---                   | :---              | :---       |
+| MLP        | 78.4747                | 77.4084           | 100        |
+| DNN        | 96.1010                | 376.229           | 1000       |
+
 ## 4. Instructions:
 
 Compile project by running script `./train_mnist_android.sh`
