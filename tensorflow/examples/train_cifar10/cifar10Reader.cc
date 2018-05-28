@@ -27,7 +27,7 @@ void cifar10Reader::getTrainingBatch(int beginIdx, int batchSize,
         vector<uint8_t> vecImg = dataset.training_images[ idx ];
 
         for( auto pixel = 0 ; pixel < vecImg.size() ; pixel ++ ){
-          batchImgVec->push_back( static_cast<float>( vecImg[pixel] ) );
+          batchImgVec->push_back( static_cast<float>( vecImg[pixel]/2 ) );
         }
 
         uint8_t vecLabel = dataset.training_labels[ idx ];
